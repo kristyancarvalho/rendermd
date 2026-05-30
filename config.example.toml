@@ -1,0 +1,48 @@
+[ui]
+padding           = 2
+line_spacing      = 0
+scrolloff         = 4
+soft_wrap         = true
+max_width         = 96
+show_line_numbers = false
+show_urls         = false
+
+[theme]
+name      = "default"
+background = ""
+text       = ""
+muted      = ""
+heading    = ""
+accent     = ""
+link       = ""
+link_url   = ""
+code_bg    = ""
+quote_bg   = ""
+border     = ""
+
+[markdown]
+hide_syntax       = true
+render_emphasis   = true
+render_strong     = true
+render_links      = true
+render_images     = false
+render_tables     = true
+render_task_lists = true
+
+[keys]
+up        = "k"
+down      = "j"
+half_up   = "ctrl+u"
+half_down = "ctrl+d"
+top       = "g"
+bottom    = "G"
+search    = "/"
+next_hit  = "n"
+prev_hit  = "N"
+reload    = "r"
+quit      = "q"
+help      = "?"
+
+[watch]
+enabled     = true
+debounce_ms = 150

@@ -1,0 +1,47 @@
+# binaries
+bin/
+dist/
+mdp
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# build artifacts
+*.o
+*.a
+*.test
+*.out
+coverage.txt
+coverage.html
+cpu.prof
+mem.prof
+*.prof
+
+# go module cache and vendor
+vendor/
+go.sum.bak
+
+# editor and IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.iml
+
+# environment and secrets
+.env
+.env.*
+*.env
+!config.example.toml
+
+# test artifacts
+testdata/*.tmp
+__debug_bin
+
+# goreleaser
+dist/
