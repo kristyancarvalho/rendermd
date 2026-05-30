@@ -19,6 +19,8 @@ cpu.prof
 mem.prof
 *.prof
 
+specs
+
 # go module cache and vendor
 vendor/
 go.sum.bak
