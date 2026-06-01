@@ -132,9 +132,12 @@ func (m *uiModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case input.ActionHalfDown:
 		m.scrollBy(m.viewport.Height / 2)
 	case input.ActionHalfUp:
-		m.scrollBy(-m.viewport.Height / 2)
+		m.scrollBy(-(m.viewport.Height / 2))
 	case input.ActionBottom:
-		m.viewport.Offset = clampMin(len(m.lines)-m.viewport.Height, 0)
+		m.viewport.Offset = len(m.lines) - m.viewport.Height
+		if m.viewport.Offset < 0 {
+			m.viewport.Offset = 0
+		}
 	case input.ActionSearch:
 		m.state = input.StateSearch
 		m.queryBuf = ""
@@ -275,10 +278,10 @@ func (m *uiModel) helpView() string {
 	)
 
 	panel := panelStyle.Render(content)
-	lines := strings.Split(panel, "\n")
-	panelH := len(lines)
+	panelLines := strings.Split(panel, "\n")
+	panelH := len(panelLines)
 	panelW := 0
-	for _, l := range lines {
+	for _, l := range panelLines {
 		if utf8.RuneCountInString(l) > panelW {
 			panelW = utf8.RuneCountInString(l)
 		}
@@ -297,7 +300,7 @@ func (m *uiModel) helpView() string {
 	for i := 0; i < topPad; i++ {
 		sb.WriteString("\n")
 	}
-	for _, l := range lines {
+	for _, l := range panelLines {
 		sb.WriteString(strings.Repeat(" ", leftPad))
 		sb.WriteString(l)
 		sb.WriteString("\n")
@@ -307,10 +310,11 @@ func (m *uiModel) helpView() string {
 
 func (m *uiModel) reLayout() {
 	cfg := layout.LayoutConfig{
-		Width:    m.viewport.Width,
-		Padding:  m.cfg.UI.Padding,
-		SoftWrap: m.cfg.UI.SoftWrap,
-		ShowURLs: m.cfg.UI.ShowURLs,
+		Width:      m.viewport.Width,
+		Padding:    m.cfg.UI.Padding,
+		SoftWrap:   m.cfg.UI.SoftWrap,
+		ShowURLs:   m.cfg.UI.ShowURLs,
+		HideSyntax: m.cfg.Markdown.HideSyntax,
 	}
 	m.lines = m.engine.Render(m.doc, cfg)
 	if m.query != "" {

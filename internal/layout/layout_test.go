@@ -24,7 +24,25 @@ func code(lang string, lines ...string) *model.CodeBlock {
 }
 
 func defaultCfg(width int) LayoutConfig {
-	return LayoutConfig{Width: width, Padding: 0, SoftWrap: true}
+	return LayoutConfig{Width: width, Padding: 0, SoftWrap: true, HideSyntax: true}
+}
+
+func flattenLines(lines []Line) string {
+	var sb strings.Builder
+	for _, l := range lines {
+		for _, seg := range l.Segments {
+			sb.WriteString(seg.Text)
+		}
+	}
+	return sb.String()
+}
+
+func flattenLine(l Line) string {
+	var sb strings.Builder
+	for _, seg := range l.Segments {
+		sb.WriteString(seg.Text)
+	}
+	return sb.String()
 }
 
 func TestLayout_H1_HasBlankLinesBefore(t *testing.T) {
@@ -95,7 +113,7 @@ func TestLayout_Paragraph_ContainsText(t *testing.T) {
 
 func TestLayout_Paragraph_Wrapping(t *testing.T) {
 	long := strings.Repeat("word ", 30)
-	lines := Layout(doc(para(long)), LayoutConfig{Width: 40, Padding: 0, SoftWrap: true})
+	lines := Layout(doc(para(long)), LayoutConfig{Width: 40, Padding: 0, SoftWrap: true, HideSyntax: true})
 	wrapped := 0
 	for _, l := range lines {
 		if !isEmptyLine(l) {
@@ -107,21 +125,28 @@ func TestLayout_Paragraph_Wrapping(t *testing.T) {
 	}
 }
 
-func TestLayout_CodeBlock_StyleIsCodeBlock(t *testing.T) {
+func TestLayout_CodeBlock_ContainsCodeText(t *testing.T) {
+	lines := Layout(doc(code("go", "x := 1", "y := 2")), defaultCfg(80))
+	full := flattenLines(lines)
+	if !strings.Contains(full, "x") || !strings.Contains(full, "1") {
+		t.Error("code block output should contain 'x' and '1'")
+	}
+	if !strings.Contains(full, "y") || !strings.Contains(full, "2") {
+		t.Error("code block output should contain 'y' and '2'")
+	}
+}
+
+func TestLayout_CodeBlock_LinesPreserved(t *testing.T) {
 	lines := Layout(doc(code("go", "x := 1", "y := 2")), defaultCfg(80))
 	found := 0
 	for _, l := range lines {
-		for _, seg := range l.Segments {
-			if strings.Contains(seg.Text, "x := 1") || strings.Contains(seg.Text, "y := 2") {
-				if seg.Style != StyleCodeBlock {
-					t.Errorf("code line should have StyleCodeBlock, got %d", seg.Style)
-				}
-				found++
-			}
+		trimmed := strings.TrimSpace(flattenLine(l))
+		if trimmed == "x := 1" || trimmed == "y := 2" {
+			found++
 		}
 	}
 	if found != 2 {
-		t.Errorf("expected 2 code lines, found %d", found)
+		t.Errorf("expected 2 reconstructed code lines, found %d", found)
 	}
 }
 
@@ -135,6 +160,136 @@ func TestLayout_CodeBlock_SurroundedByBlanks(t *testing.T) {
 	}
 	if !isEmptyLine(lines[len(lines)-1]) {
 		t.Error("code block should end with blank line")
+	}
+}
+
+func TestLayout_CodeBlock_UnknownLang_FallsBack(t *testing.T) {
+	lines := Layout(doc(code("brainfuck", "some code")), defaultCfg(80))
+	found := false
+	for _, l := range lines {
+		for _, seg := range l.Segments {
+			if strings.Contains(seg.Text, "some code") {
+				if seg.Style != StyleCodeBlock {
+					t.Errorf("unknown lang: segment should have StyleCodeBlock, got %d", seg.Style)
+				}
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Error("unknown lang: code text not found in output")
+	}
+}
+
+func TestLayout_CodeBlock_EmptyLang_FallsBack(t *testing.T) {
+	lines := Layout(doc(code("", "plain text")), defaultCfg(80))
+	found := false
+	for _, l := range lines {
+		for _, seg := range l.Segments {
+			if strings.Contains(seg.Text, "plain text") {
+				if seg.Style != StyleCodeBlock {
+					t.Errorf("empty lang: segment should have StyleCodeBlock, got %d", seg.Style)
+				}
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Error("empty lang: code text not found in output")
+	}
+}
+
+func TestLayout_CodeBlock_Go_HasSyntaxStyles(t *testing.T) {
+	lines := Layout(doc(code("go", `func main() { // comment`)), defaultCfg(80))
+	hasKeyword := false
+	hasComment := false
+	for _, l := range lines {
+		for _, seg := range l.Segments {
+			if seg.Style == StyleSyntaxKeyword {
+				hasKeyword = true
+			}
+			if seg.Style == StyleSyntaxComment {
+				hasComment = true
+			}
+		}
+	}
+	if !hasKeyword {
+		t.Error("go code block should produce at least one StyleSyntaxKeyword segment")
+	}
+	if !hasComment {
+		t.Error("go code block should produce at least one StyleSyntaxComment segment")
+	}
+}
+
+func TestLayout_CodeBlock_Go_StringHighlighted(t *testing.T) {
+	lines := Layout(doc(code("go", `fmt.Println("hello")`)), defaultCfg(80))
+	hasString := false
+	for _, l := range lines {
+		for _, seg := range l.Segments {
+			if seg.Style == StyleSyntaxString && strings.Contains(seg.Text, "hello") {
+				hasString = true
+			}
+		}
+	}
+	if !hasString {
+		t.Error("go string literal should produce StyleSyntaxString segment")
+	}
+}
+
+func TestLayout_CodeBlock_Go_NumberHighlighted(t *testing.T) {
+	lines := Layout(doc(code("go", "x := 42")), defaultCfg(80))
+	hasNumber := false
+	for _, l := range lines {
+		for _, seg := range l.Segments {
+			if seg.Style == StyleSyntaxNumber && strings.Contains(seg.Text, "42") {
+				hasNumber = true
+			}
+		}
+	}
+	if !hasNumber {
+		t.Error("go number literal should produce StyleSyntaxNumber segment")
+	}
+}
+
+func TestLayout_CodeBlock_HideSyntax_False_ShowsLangHeader(t *testing.T) {
+	cfg := LayoutConfig{Width: 80, HideSyntax: false}
+	lines := Layout(doc(code("go", "x := 1")), cfg)
+	found := false
+	for _, l := range lines {
+		for _, seg := range l.Segments {
+			if strings.Contains(seg.Text, "go") && seg.Style == StyleMuted {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Error("HideSyntax=false with lang should show a muted lang header line")
+	}
+}
+
+func TestLayout_CodeBlock_HideSyntax_True_NoLangHeader(t *testing.T) {
+	cfg := LayoutConfig{Width: 80, HideSyntax: true}
+	lines := Layout(doc(code("go", "x := 1")), cfg)
+	for _, l := range lines {
+		for _, seg := range l.Segments {
+			if seg.Text == " go" && seg.Style == StyleMuted {
+				t.Error("HideSyntax=true should not show lang header line")
+			}
+		}
+	}
+}
+
+func TestLayout_CodeBlock_HideSyntax_NoLang_NoHeader(t *testing.T) {
+	cfg := LayoutConfig{Width: 80, HideSyntax: false}
+	lines := Layout(doc(code("", "x := 1")), cfg)
+	count := 0
+	for _, l := range lines {
+		if !isEmptyLine(l) {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("empty lang with HideSyntax=false should produce exactly 1 content line, got %d", count)
 	}
 }
 
@@ -187,12 +342,7 @@ func TestLayout_OrderedList_NumbersPresent(t *testing.T) {
 		},
 	}
 	lines := Layout(doc(lst), defaultCfg(80))
-	flat := ""
-	for _, l := range lines {
-		for _, seg := range l.Segments {
-			flat += seg.Text
-		}
-	}
+	flat := flattenLines(lines)
 	if !strings.Contains(flat, "1.") || !strings.Contains(flat, "2.") {
 		t.Errorf("ordered list should contain '1.' and '2.', got: %q", flat)
 	}
@@ -208,12 +358,7 @@ func TestLayout_TaskList_CheckboxPresent(t *testing.T) {
 		},
 	}
 	lines := Layout(doc(lst), defaultCfg(80))
-	flat := ""
-	for _, l := range lines {
-		for _, seg := range l.Segments {
-			flat += seg.Text
-		}
-	}
+	flat := flattenLines(lines)
 	if !strings.Contains(flat, "[x]") {
 		t.Errorf("expected checked checkbox '[x]', got: %q", flat)
 	}
@@ -254,12 +399,7 @@ func TestLayout_Table_HeadersPresent(t *testing.T) {
 		Align: []model.TableAlign{model.AlignLeft, model.AlignRight},
 	}
 	lines := Layout(doc(tbl), defaultCfg(80))
-	flat := ""
-	for _, l := range lines {
-		for _, seg := range l.Segments {
-			flat += seg.Text
-		}
-	}
+	flat := flattenLines(lines)
 	if !strings.Contains(flat, "Name") || !strings.Contains(flat, "Age") {
 		t.Errorf("table should contain headers, got: %q", flat)
 	}
@@ -291,17 +431,8 @@ func TestEngine_Cache_InvalidatesOnChange(t *testing.T) {
 	d2 := doc(para("different content"))
 	l2 := e.Render(d2, cfg)
 
-	flat1, flat2 := "", ""
-	for _, l := range l1 {
-		for _, s := range l.Segments {
-			flat1 += s.Text
-		}
-	}
-	for _, l := range l2 {
-		for _, s := range l.Segments {
-			flat2 += s.Text
-		}
-	}
+	flat1 := flattenLines(l1)
+	flat2 := flattenLines(l2)
 	if flat1 == flat2 {
 		t.Error("engine should re-render when document content changes")
 	}

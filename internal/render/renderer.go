@@ -22,6 +22,8 @@ func New(thm theme.Theme) *Renderer {
 	r := &Renderer{
 		styles: make(map[layout.StyleID]lipgloss.Style),
 	}
+	codeBg := lipgloss.Color(thm.CodeBg)
+
 	r.styles[layout.StyleNormal] = lipgloss.NewStyle().Foreground(lipgloss.Color(thm.Text))
 	r.styles[layout.StyleHeading1] = lipgloss.NewStyle().Foreground(lipgloss.Color(thm.Heading)).Bold(true)
 	r.styles[layout.StyleHeading2] = lipgloss.NewStyle().Foreground(lipgloss.Color(thm.Heading)).Bold(true)
@@ -33,10 +35,10 @@ func New(thm theme.Theme) *Renderer {
 	r.styles[layout.StyleEmphasis] = lipgloss.NewStyle().Italic(true)
 	r.styles[layout.StyleInlineCode] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(thm.Text)).
-		Background(lipgloss.Color(thm.CodeBg))
+		Background(codeBg)
 	r.styles[layout.StyleCodeBlock] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(thm.Text)).
-		Background(lipgloss.Color(thm.CodeBg))
+		Background(codeBg)
 	r.styles[layout.StyleQuote] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(thm.Muted)).
 		Background(lipgloss.Color(thm.QuoteBg))
@@ -47,6 +49,30 @@ func New(thm theme.Theme) *Renderer {
 	r.styles[layout.StyleMuted] = lipgloss.NewStyle().Foreground(lipgloss.Color(thm.Muted))
 	r.styles[layout.StyleRule] = lipgloss.NewStyle().Foreground(lipgloss.Color(thm.Border))
 	r.styles[layout.StyleAccent] = lipgloss.NewStyle().Foreground(lipgloss.Color(thm.Accent)).Bold(true)
+
+	r.styles[layout.StyleSyntaxKeyword] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(thm.SyntaxKeyword)).
+		Background(codeBg)
+	r.styles[layout.StyleSyntaxString] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(thm.SyntaxString)).
+		Background(codeBg)
+	r.styles[layout.StyleSyntaxComment] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(thm.SyntaxComment)).
+		Background(codeBg).
+		Italic(true)
+	r.styles[layout.StyleSyntaxNumber] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(thm.SyntaxNumber)).
+		Background(codeBg)
+	r.styles[layout.StyleSyntaxType] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(thm.SyntaxType)).
+		Background(codeBg)
+	r.styles[layout.StyleSyntaxBuiltin] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(thm.SyntaxBuiltin)).
+		Background(codeBg)
+	r.styles[layout.StyleSyntaxOperator] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(thm.SyntaxOperator)).
+		Background(codeBg)
+
 	return r
 }
 
