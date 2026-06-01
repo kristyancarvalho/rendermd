@@ -71,12 +71,14 @@ func toList(n *ast.List, src []byte) *model.List {
 	for child := n.FirstChild(); child != nil; child = child.NextSibling() {
 		if li, ok := child.(*ast.ListItem); ok {
 			item := model.ListItem{Blocks: childBlocks(li, src)}
-			if li.FirstChild() != nil {
-				if taskItem, ok := li.FirstChild().(*extast.TaskCheckBox); ok {
+
+			if para := li.FirstChild(); para != nil {
+				if taskItem, ok := para.FirstChild().(*extast.TaskCheckBox); ok {
 					checked := taskItem.IsChecked
 					item.Checked = &checked
 				}
 			}
+
 			l.Items = append(l.Items, item)
 		}
 	}
