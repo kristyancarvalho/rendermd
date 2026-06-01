@@ -96,9 +96,9 @@ func (k Keymap) Resolve(msg tea.KeyMsg) (Action, string) {
 		return ActionBottom, ""
 	case matchKey(key, k.Search):
 		return ActionSearch, ""
-	case matchKey(key, k.PrevHit):
+	case key == k.PrevHit:
 		return ActionPrevHit, ""
-	case matchKey(key, k.NextHit):
+	case key == k.NextHit:
 		return ActionNextHit, ""
 	case matchKey(key, k.Reload):
 		return ActionReload, ""
