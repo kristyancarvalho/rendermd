@@ -11,4 +11,12 @@ type Theme struct {
 	CodeBg     string
 	QuoteBg    string
 	Border     string
+
+	SyntaxKeyword  string
+	SyntaxString   string
+	SyntaxComment  string
+	SyntaxNumber   string
+	SyntaxType     string
+	SyntaxBuiltin  string
+	SyntaxOperator string
 }

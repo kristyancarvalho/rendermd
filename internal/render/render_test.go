@@ -54,14 +54,13 @@ func TestRender_Offset(t *testing.T) {
 func TestRender_OffsetPastEnd(t *testing.T) {
 	ls := lines("only")
 	vp := Viewport{Width: 40, Height: 5, Offset: 99}
-	out := Render(ls, testStyles(), vp)	
+	out := Render(ls, testStyles(), vp)
 	_ = out
 }
 
 func TestRender_EmptyLines(t *testing.T) {
 	vp := Viewport{Width: 40, Height: 3, Offset: 0}
 	out := Render(nil, testStyles(), vp)
-	
 	if strings.TrimSpace(out) != "" {
 		t.Errorf("empty line list should produce blank output, got %q", out)
 	}
@@ -82,7 +81,7 @@ func TestNew_AllStylesInitialised(t *testing.T) {
 	if r == nil {
 		t.Fatal("New should not return nil")
 	}
-	
+
 	ids := []layout.StyleID{
 		layout.StyleNormal,
 		layout.StyleHeading1,
@@ -96,6 +95,13 @@ func TestNew_AllStylesInitialised(t *testing.T) {
 		layout.StyleLink,
 		layout.StyleMuted,
 		layout.StyleRule,
+		layout.StyleSyntaxKeyword,
+		layout.StyleSyntaxString,
+		layout.StyleSyntaxComment,
+		layout.StyleSyntaxNumber,
+		layout.StyleSyntaxType,
+		layout.StyleSyntaxBuiltin,
+		layout.StyleSyntaxOperator,
 	}
 	for _, id := range ids {
 		if _, ok := r.styles[id]; !ok {
@@ -146,5 +152,26 @@ func TestRender_MultiSegmentLine(t *testing.T) {
 	out := Render(ls, testStyles(), vp)
 	if !strings.Contains(out, "hello") || !strings.Contains(out, "world") {
 		t.Errorf("multi-segment line should contain all segments, got: %q", out)
+	}
+}
+
+func TestRender_SyntaxStyles_DoNotPanic(t *testing.T) {
+	r := New(theme.Default)
+	ls := []layout.Line{{
+		Segments: []layout.Segment{
+			{Text: "func", Style: layout.StyleSyntaxKeyword},
+			{Text: " ", Style: layout.StyleSyntaxOperator},
+			{Text: "main", Style: layout.StyleNormal},
+			{Text: `"hello"`, Style: layout.StyleSyntaxString},
+			{Text: "42", Style: layout.StyleSyntaxNumber},
+			{Text: "string", Style: layout.StyleSyntaxType},
+			{Text: "len", Style: layout.StyleSyntaxBuiltin},
+			{Text: "// note", Style: layout.StyleSyntaxComment},
+		},
+	}}
+	vp := Viewport{Width: 80, Height: 1, Offset: 0}
+	out := r.Render(ls, vp)
+	if !strings.Contains(out, "func") {
+		t.Errorf("syntax keyword should appear in rendered output, got: %q", out)
 	}
 }

@@ -92,7 +92,7 @@ func (k Keymap) Resolve(msg tea.KeyMsg) (Action, string) {
 		return ActionHalfUp, ""
 	case matchKey(key, k.HalfDown):
 		return ActionHalfDown, ""
-	case matchKey(key, k.Bottom):
+	case key == k.Bottom:
 		return ActionBottom, ""
 	case matchKey(key, k.Search):
 		return ActionSearch, ""

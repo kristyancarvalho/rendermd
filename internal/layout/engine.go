@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/kristyancarvalho/mdp/internal/model"
+	"github.com/kristyancarvalho/mdp/internal/syntax"
 )
 
 type StyleID int
@@ -28,6 +29,13 @@ const (
 	StyleMuted
 	StyleRule
 	StyleAccent
+	StyleSyntaxKeyword
+	StyleSyntaxString
+	StyleSyntaxComment
+	StyleSyntaxNumber
+	StyleSyntaxType
+	StyleSyntaxBuiltin
+	StyleSyntaxOperator
 )
 
 type Segment struct {
@@ -41,10 +49,11 @@ type Line struct {
 }
 
 type LayoutConfig struct {
-	Width    int
-	Padding  int
-	SoftWrap bool
-	ShowURLs bool
+	Width      int
+	Padding    int
+	SoftWrap   bool
+	ShowURLs   bool
+	HideSyntax bool
 }
 
 type Engine struct {
@@ -74,37 +83,32 @@ func Layout(doc model.Document, cfg LayoutConfig) []Line {
 	}
 
 	var out []Line
-	for i, block := range doc.Blocks {
-		at := len(out)
-		blockLines := renderBlock(block, avail, cfg)
-		out = append(out, blockLines...)
-		_ = i
-		_ = at
+	for _, block := range doc.Blocks {
+		out = append(out, renderBlock(block, avail, cfg)...)
 	}
 	return out
 }
 
 func renderBlock(b model.Block, width int, cfg LayoutConfig) []Line {
-	var out []Line
 	switch v := b.(type) {
 	case *model.Heading:
-		out = renderHeading(v, width, cfg)
+		return renderHeading(v, width, cfg)
 	case *model.Paragraph:
-		out = renderParagraph(v, width, cfg)
+		return renderParagraph(v, width, cfg)
 	case *model.CodeBlock:
-		out = renderCodeBlock(v, width, cfg)
+		return renderCodeBlock(v, width, cfg)
 	case *model.Quote:
-		out = renderQuote(v, width, cfg)
+		return renderQuote(v, width, cfg)
 	case *model.List:
-		out = renderList(v, width, cfg)
+		return renderList(v, width, cfg)
 	case *model.Table:
-		out = renderTable(v, width, cfg)
+		return renderTable(v, width, cfg)
 	case *model.ThematicBreak:
-		out = renderThematicBreak(width)
+		return renderThematicBreak(width)
 	case *model.ImagePlaceholder:
-		out = []Line{{Segments: []Segment{{Text: "[image: " + v.AltText + "]", Style: StyleMuted}}}}
+		return []Line{{Segments: []Segment{{Text: "[image: " + v.AltText + "]", Style: StyleMuted}}}}
 	}
-	return out
+	return nil
 }
 
 func headingStyle(level int) StyleID {
@@ -124,7 +128,7 @@ func headingStyle(level int) StyleID {
 	}
 }
 
-func renderHeading(h *model.Heading, width int, cfg LayoutConfig) []Line {
+func renderHeading(h *model.Heading, width int, _ LayoutConfig) []Line {
 	var lines []Line
 	if h.Level == 1 {
 		lines = append(lines, emptyLine(), emptyLine())
@@ -141,22 +145,61 @@ func renderHeading(h *model.Heading, width int, cfg LayoutConfig) []Line {
 }
 
 func renderParagraph(p *model.Paragraph, width int, cfg LayoutConfig) []Line {
-	var lines []Line
-	wrapped := wrapSpans(p.Spans, width, cfg)
-	lines = append(lines, wrapped...)
+	lines := wrapSpans(p.Spans, width, cfg)
 	lines = append(lines, emptyLine())
 	return lines
 }
 
-func renderCodeBlock(c *model.CodeBlock, width int, cfg LayoutConfig) []Line {
+func kindToStyle(k syntax.TokenKind) StyleID {
+	switch k {
+	case syntax.KindKeyword:
+		return StyleSyntaxKeyword
+	case syntax.KindString:
+		return StyleSyntaxString
+	case syntax.KindComment:
+		return StyleSyntaxComment
+	case syntax.KindNumber:
+		return StyleSyntaxNumber
+	case syntax.KindType:
+		return StyleSyntaxType
+	case syntax.KindBuiltin:
+		return StyleSyntaxBuiltin
+	case syntax.KindOperator:
+		return StyleSyntaxOperator
+	default:
+		return StyleCodeBlock
+	}
+}
+
+func renderCodeBlock(c *model.CodeBlock, _ int, cfg LayoutConfig) []Line {
 	var lines []Line
 	lines = append(lines, emptyLine())
-	for _, l := range c.Lines {
+
+	if !cfg.HideSyntax && c.Lang != "" {
 		lines = append(lines, Line{
-			Segments: []Segment{{Text: " " + l, Style: StyleCodeBlock}},
-			Indent:   1,
+			Segments: []Segment{{Text: " " + c.Lang, Style: StyleMuted}},
 		})
 	}
+
+	for _, l := range c.Lines {
+		tokens := syntax.Tokenize(c.Lang, l)
+		segs := make([]Segment, 0, len(tokens))
+		for i, tok := range tokens {
+			text := tok.Text
+			if i == 0 {
+				text = " " + text
+			}
+			segs = append(segs, Segment{
+				Text:  text,
+				Style: kindToStyle(tok.Kind),
+			})
+		}
+		if len(segs) == 0 {
+			segs = []Segment{{Text: " ", Style: StyleCodeBlock}}
+		}
+		lines = append(lines, Line{Segments: segs, Indent: 1})
+	}
+
 	lines = append(lines, emptyLine())
 	return lines
 }
@@ -231,14 +274,15 @@ func renderThematicBreak(width int) []Line {
 	if width <= 0 {
 		width = 40
 	}
+	rule := strings.Repeat("─", width)
 	return []Line{
 		emptyLine(),
-		{Segments: []Segment{{Text: strings.Repeat("─", width), Style: StyleRule}}},
+		{Segments: []Segment{{Text: rule, Style: StyleRule}}},
 		emptyLine(),
 	}
 }
 
-func renderTable(t *model.Table, width int, cfg LayoutConfig) []Line {
+func renderTable(t *model.Table, width int, _ LayoutConfig) []Line {
 	var lines []Line
 	lines = append(lines, emptyLine())
 
@@ -248,36 +292,41 @@ func renderTable(t *model.Table, width int, cfg LayoutConfig) []Line {
 	}
 
 	colWidths := make([]int, nCols)
+	measureSpans := func(spans []model.Span) int {
+		return utf8.RuneCountInString(spansText(spans))
+	}
 	for i, h := range t.Headers {
-		w := utf8.RuneCountInString(spansText(h))
-		if w > colWidths[i] {
+		if w := measureSpans(h); w > colWidths[i] {
 			colWidths[i] = w
 		}
 	}
-	
 	for r := 0; r+nCols <= len(t.Rows); r += nCols {
 		for i := 0; i < nCols; i++ {
-			w := utf8.RuneCountInString(spansText(t.Rows[r+i]))
-			if w > colWidths[i] {
+			if w := measureSpans(t.Rows[r+i]); w > colWidths[i] {
 				colWidths[i] = w
 			}
 		}
 	}
 
-	totalWidth := 0
+	total := 0
 	for _, w := range colWidths {
-		totalWidth += w + 3
+		total += w + 3
 	}
-	if totalWidth > width {
-		excess := totalWidth - width
-		for i := nCols - 1; i >= 0 && excess > 0; i-- {
-			cut := excess
-			if cut > colWidths[i]-3 {
-				cut = colWidths[i] - 3
+	if total > width && nCols > 0 {
+		shrink := (total - width) / nCols
+		for i := range colWidths {
+			colWidths[i] = colWidths[i] - shrink
+			if colWidths[i] < 3 {
+				colWidths[i] = 3
 			}
-			colWidths[i] -= cut
-			excess -= cut
 		}
+	}
+
+	align := func(i int) model.TableAlign {
+		if i < len(t.Align) {
+			return t.Align[i]
+		}
+		return model.AlignNone
 	}
 
 	formatCell := func(spans []model.Span, col int) string {
@@ -289,21 +338,17 @@ func renderTable(t *model.Table, width int, cfg LayoutConfig) []Line {
 			if max > 1 {
 				text = string(runes[:max-1]) + "…"
 			} else {
-				text = "…"
+				text = string(runes[:max])
 			}
 			w = max
 		}
-		var align model.TableAlign
-		if col < len(t.Align) {
-			align = t.Align[col]
-		}
-		switch align {
-		case model.AlignRight:
-			return strings.Repeat(" ", max-w) + text
+		switch align(col) {
 		case model.AlignCenter:
 			left := (max - w) / 2
 			right := max - w - left
 			return strings.Repeat(" ", left) + text + strings.Repeat(" ", right)
+		case model.AlignRight:
+			return strings.Repeat(" ", max-w) + text
 		default:
 			return text + strings.Repeat(" ", max-w)
 		}
@@ -325,9 +370,7 @@ func renderTable(t *model.Table, width int, cfg LayoutConfig) []Line {
 	}
 
 	headerCells := make([][]model.Span, nCols)
-	for i, h := range t.Headers {
-		headerCells[i] = h
-	}
+	copy(headerCells, t.Headers)
 	lines = append(lines, buildRow(headerCells, StyleStrong))
 
 	sep := make([]string, nCols)
@@ -347,13 +390,6 @@ func renderTable(t *model.Table, width int, cfg LayoutConfig) []Line {
 
 	lines = append(lines, emptyLine())
 	return lines
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func emptyLine() Line {

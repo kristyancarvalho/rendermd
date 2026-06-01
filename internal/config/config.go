@@ -40,6 +40,14 @@ type ThemeConfig struct {
 	CodeBg     string `toml:"code_bg"`
 	QuoteBg    string `toml:"quote_bg"`
 	Border     string `toml:"border"`
+
+	SyntaxKeyword  string `toml:"syntax_keyword"`
+	SyntaxString   string `toml:"syntax_string"`
+	SyntaxComment  string `toml:"syntax_comment"`
+	SyntaxNumber   string `toml:"syntax_number"`
+	SyntaxType     string `toml:"syntax_type"`
+	SyntaxBuiltin  string `toml:"syntax_builtin"`
+	SyntaxOperator string `toml:"syntax_operator"`
 }
 
 type MarkdownConfig struct {
@@ -153,6 +161,27 @@ func merge(base, overlay Config) Config {
 	if overlay.Theme.Border != "" {
 		base.Theme.Border = overlay.Theme.Border
 	}
+	if overlay.Theme.SyntaxKeyword != "" {
+		base.Theme.SyntaxKeyword = overlay.Theme.SyntaxKeyword
+	}
+	if overlay.Theme.SyntaxString != "" {
+		base.Theme.SyntaxString = overlay.Theme.SyntaxString
+	}
+	if overlay.Theme.SyntaxComment != "" {
+		base.Theme.SyntaxComment = overlay.Theme.SyntaxComment
+	}
+	if overlay.Theme.SyntaxNumber != "" {
+		base.Theme.SyntaxNumber = overlay.Theme.SyntaxNumber
+	}
+	if overlay.Theme.SyntaxType != "" {
+		base.Theme.SyntaxType = overlay.Theme.SyntaxType
+	}
+	if overlay.Theme.SyntaxBuiltin != "" {
+		base.Theme.SyntaxBuiltin = overlay.Theme.SyntaxBuiltin
+	}
+	if overlay.Theme.SyntaxOperator != "" {
+		base.Theme.SyntaxOperator = overlay.Theme.SyntaxOperator
+	}
 
 	base.Markdown = overlay.Markdown
 
@@ -204,16 +233,23 @@ func merge(base, overlay Config) Config {
 func resolveTheme(tc ThemeConfig) theme.Theme {
 	base := theme.Resolve(tc.Name)
 	overrides := theme.Theme{
-		Background: tc.Background,
-		Text:       tc.Text,
-		Muted:      tc.Muted,
-		Heading:    tc.Heading,
-		Accent:     tc.Accent,
-		Link:       tc.Link,
-		LinkURL:    tc.LinkURL,
-		CodeBg:     tc.CodeBg,
-		QuoteBg:    tc.QuoteBg,
-		Border:     tc.Border,
+		Background:     tc.Background,
+		Text:           tc.Text,
+		Muted:          tc.Muted,
+		Heading:        tc.Heading,
+		Accent:         tc.Accent,
+		Link:           tc.Link,
+		LinkURL:        tc.LinkURL,
+		CodeBg:         tc.CodeBg,
+		QuoteBg:        tc.QuoteBg,
+		Border:         tc.Border,
+		SyntaxKeyword:  tc.SyntaxKeyword,
+		SyntaxString:   tc.SyntaxString,
+		SyntaxComment:  tc.SyntaxComment,
+		SyntaxNumber:   tc.SyntaxNumber,
+		SyntaxType:     tc.SyntaxType,
+		SyntaxBuiltin:  tc.SyntaxBuiltin,
+		SyntaxOperator: tc.SyntaxOperator,
 	}
 	return theme.Merge(base, overrides)
 }
