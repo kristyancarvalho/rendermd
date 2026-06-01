@@ -1,7 +1,6 @@
 # binaries
 bin/
 dist/
-mdp
 *.exe
 *.exe~
 *.dll
