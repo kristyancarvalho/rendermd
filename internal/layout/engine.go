@@ -128,7 +128,7 @@ func headingStyle(level int) StyleID {
 	}
 }
 
-func renderHeading(h *model.Heading, width int, cfg LayoutConfig) []Line {
+func renderHeading(h *model.Heading, width int, _ LayoutConfig) []Line {
 	var lines []Line
 	if h.Level == 1 {
 		lines = append(lines, emptyLine(), emptyLine())
@@ -171,7 +171,7 @@ func kindToStyle(k syntax.TokenKind) StyleID {
 	}
 }
 
-func renderCodeBlock(c *model.CodeBlock, width int, cfg LayoutConfig) []Line {
+func renderCodeBlock(c *model.CodeBlock, _ int, cfg LayoutConfig) []Line {
 	var lines []Line
 	lines = append(lines, emptyLine())
 
@@ -282,7 +282,7 @@ func renderThematicBreak(width int) []Line {
 	}
 }
 
-func renderTable(t *model.Table, width int, cfg LayoutConfig) []Line {
+func renderTable(t *model.Table, width int, _ LayoutConfig) []Line {
 	var lines []Line
 	lines = append(lines, emptyLine())
 
@@ -370,9 +370,7 @@ func renderTable(t *model.Table, width int, cfg LayoutConfig) []Line {
 	}
 
 	headerCells := make([][]model.Span, nCols)
-	for i, h := range t.Headers {
-		headerCells[i] = h
-	}
+	copy(headerCells, t.Headers)
 	lines = append(lines, buildRow(headerCells, StyleStrong))
 
 	sep := make([]string, nCols)
@@ -392,13 +390,6 @@ func renderTable(t *model.Table, width int, cfg LayoutConfig) []Line {
 
 	lines = append(lines, emptyLine())
 	return lines
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func emptyLine() Line {

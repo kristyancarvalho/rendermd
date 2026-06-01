@@ -401,10 +401,3 @@ func toKeymap(k config.KeysConfig) input.Keymap {
 	}
 	return km
 }
-
-func clampMin(v, min int) int {
-	if v < min {
-		return min
-	}
-	return v
-}
