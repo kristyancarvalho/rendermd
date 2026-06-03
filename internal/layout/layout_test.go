@@ -469,6 +469,116 @@ func TestEngine_Cache_InvalidatesOnChange(t *testing.T) {
 	}
 }
 
+func TestEngine_Cache_InvalidatesOnListChange(t *testing.T) {
+	e := &Engine{}
+	cfg := defaultCfg(80)
+
+	lst1 := &model.List{
+		Ordered: false,
+		Items:   []model.ListItem{{Blocks: []model.Block{para("apple")}}},
+	}
+	lst2 := &model.List{
+		Ordered: false,
+		Items:   []model.ListItem{{Blocks: []model.Block{para("banana")}}},
+	}
+
+	l1 := e.Render(doc(lst1), cfg)
+	l2 := e.Render(doc(lst2), cfg)
+
+	if flattenLines(l1) == flattenLines(l2) {
+		t.Error("cache should invalidate when list content changes")
+	}
+}
+
+func TestEngine_Cache_InvalidatesOnOrderedFlagChange(t *testing.T) {
+	e := &Engine{}
+	cfg := defaultCfg(80)
+
+	unordered := &model.List{
+		Ordered: false,
+		Items:   []model.ListItem{{Blocks: []model.Block{para("item")}}},
+	}
+	ordered := &model.List{
+		Ordered: true,
+		Items:   []model.ListItem{{Blocks: []model.Block{para("item")}}},
+	}
+
+	l1 := e.Render(doc(unordered), cfg)
+	l2 := e.Render(doc(ordered), cfg)
+
+	if flattenLines(l1) == flattenLines(l2) {
+		t.Error("cache should invalidate when list ordered flag changes")
+	}
+}
+
+func TestEngine_Cache_InvalidatesOnQuoteChange(t *testing.T) {
+	e := &Engine{}
+	cfg := defaultCfg(80)
+
+	q1 := &model.Quote{Blocks: []model.Block{para("first quote")}}
+	q2 := &model.Quote{Blocks: []model.Block{para("second quote")}}
+
+	l1 := e.Render(doc(q1), cfg)
+	l2 := e.Render(doc(q2), cfg)
+
+	if flattenLines(l1) == flattenLines(l2) {
+		t.Error("cache should invalidate when quote content changes")
+	}
+}
+
+func TestEngine_Cache_InvalidatesOnTableChange(t *testing.T) {
+	e := &Engine{}
+	cfg := defaultCfg(80)
+
+	tbl1 := &model.Table{
+		Headers: [][]model.Span{{&model.Text{Value: "Name"}}},
+		Rows:    [][]model.Span{{&model.Text{Value: "Alice"}}},
+	}
+	tbl2 := &model.Table{
+		Headers: [][]model.Span{{&model.Text{Value: "Name"}}},
+		Rows:    [][]model.Span{{&model.Text{Value: "Bob"}}},
+	}
+
+	l1 := e.Render(doc(tbl1), cfg)
+	l2 := e.Render(doc(tbl2), cfg)
+
+	if flattenLines(l1) == flattenLines(l2) {
+		t.Error("cache should invalidate when table row content changes")
+	}
+}
+
+func TestEngine_Cache_InvalidatesOnImagePlaceholderChange(t *testing.T) {
+	e := &Engine{}
+	cfg := defaultCfg(80)
+
+	img1 := &model.ImagePlaceholder{AltText: "cat", URL: "https://example.com/cat.png"}
+	img2 := &model.ImagePlaceholder{AltText: "dog", URL: "https://example.com/dog.png"}
+
+	l1 := e.Render(doc(img1), cfg)
+	l2 := e.Render(doc(img2), cfg)
+
+	if flattenLines(l1) == flattenLines(l2) {
+		t.Error("cache should invalidate when image placeholder content changes")
+	}
+}
+
+func TestEngine_Cache_StableOnUnchangedList(t *testing.T) {
+	e := &Engine{}
+	cfg := defaultCfg(80)
+
+	lst := &model.List{
+		Ordered: true,
+		Items:   []model.ListItem{{Blocks: []model.Block{para("item")}}},
+	}
+
+	first := e.Render(doc(lst), cfg)
+	second := e.Render(doc(lst), cfg)
+
+	if len(first) > 0 && len(second) > 0 && &first[0] != &second[0] {
+		t.Error("cache should return the same slice for an unchanged list document")
+	}
+}
+
 func TestWrapText_ShortLine(t *testing.T) {
 	lines := wrapText("hello world", 80)
 	if len(lines) != 1 {

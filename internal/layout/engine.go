@@ -560,8 +560,51 @@ func writeBlockHash(h interface{ Write([]byte) (int, error) }, b model.Block) {
 		}
 	case *model.ThematicBreak:
 		h.Write([]byte{4})
-	default:
-		h.Write([]byte{0})
+	case *model.List:
+		h.Write([]byte{5})
+		if v.Ordered {
+			h.Write([]byte{1})
+		} else {
+			h.Write([]byte{0})
+		}
+		for _, item := range v.Items {
+			if item.Checked != nil {
+				if *item.Checked {
+					h.Write([]byte{1})
+				} else {
+					h.Write([]byte{0})
+				}
+			} else {
+				h.Write([]byte{2})
+			}
+			for _, blk := range item.Blocks {
+				writeBlockHash(h, blk)
+			}
+		}
+	case *model.Quote:
+		h.Write([]byte{6})
+		for _, blk := range v.Blocks {
+			writeBlockHash(h, blk)
+		}
+	case *model.Table:
+		h.Write([]byte{7})
+		for _, cell := range v.Headers {
+			for _, s := range cell {
+				writeSpanHash(h, s)
+			}
+		}
+		for _, cell := range v.Rows {
+			for _, s := range cell {
+				writeSpanHash(h, s)
+			}
+		}
+		for _, a := range v.Align {
+			h.Write([]byte{byte(a)})
+		}
+	case *model.ImagePlaceholder:
+		h.Write([]byte{8})
+		h.Write([]byte(v.AltText))
+		h.Write([]byte(v.URL))
 	}
 }
 
@@ -571,5 +614,23 @@ func writeSpanHash(h interface{ Write([]byte) (int, error) }, s model.Span) {
 		h.Write([]byte(v.Value))
 	case *model.InlineCode:
 		h.Write([]byte(v.Value))
+	case *model.Emphasis:
+		h.Write([]byte{10})
+		for _, child := range v.Children {
+			writeSpanHash(h, child)
+		}
+	case *model.Strong:
+		h.Write([]byte{11})
+		for _, child := range v.Children {
+			writeSpanHash(h, child)
+		}
+	case *model.Link:
+		h.Write([]byte{12})
+		for _, child := range v.Label {
+			writeSpanHash(h, child)
+		}
+		h.Write([]byte(v.URL))
+	case *model.HardBreak:
+		h.Write([]byte{13})
 	}
 }
