@@ -1,0 +1,61 @@
+name: Task / Improvement
+description: Track refactors, improvements, and technical tasks
+title: "[TASK] "
+labels: ["task"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the project is affected?
+      options:
+        - config
+        - parser
+        - layout
+        - render
+        - ui
+        - input
+        - watch
+        - docs
+        - packaging
+        - release
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why is this change needed?
+      placeholder: Explain the current limitation or pain point.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: What should be changed?
+      placeholder: Describe the intended solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How do we know this task is done?
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Optional implementation details, references, or edge cases.
+      placeholder: Add any extra context here.
