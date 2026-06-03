@@ -1,6 +1,7 @@
 package layout
 
 import (
+	"fmt"
 	"hash/fnv"
 	"strings"
 	"unicode/utf8"
@@ -231,7 +232,7 @@ func renderList(lst *model.List, width int, cfg LayoutConfig) []Line {
 	for i, item := range lst.Items {
 		var marker string
 		if lst.Ordered {
-			marker = padLeft(strings.TrimSpace(string(rune('0'+i+1))), 2) + ". "
+			marker = padLeft(fmt.Sprintf("%d", i+1), 2) + ". "
 		} else {
 			marker = "• "
 		}

@@ -348,6 +348,37 @@ func TestLayout_OrderedList_NumbersPresent(t *testing.T) {
 	}
 }
 
+func TestLayout_OrderedList_TenItems_NumbersPresent(t *testing.T) {
+	items := make([]model.ListItem, 10)
+	for i := range items {
+		items[i] = model.ListItem{Blocks: []model.Block{para("item")}}
+	}
+	lst := &model.List{Ordered: true, Items: items}
+	lines := Layout(doc(lst), defaultCfg(80))
+	flat := flattenLines(lines)
+	if !strings.Contains(flat, "10.") {
+		t.Errorf("ordered list with 10 items should contain '10.', got: %q", flat)
+	}
+	if strings.Contains(flat, ":") {
+		t.Errorf("ordered list item 10 must not render as ':' (rune arithmetic bug), got: %q", flat)
+	}
+}
+
+func TestLayout_OrderedList_MultiDigit_Alignment(t *testing.T) {
+	items := make([]model.ListItem, 12)
+	for i := range items {
+		items[i] = model.ListItem{Blocks: []model.Block{para("item")}}
+	}
+	lst := &model.List{Ordered: true, Items: items}
+	lines := Layout(doc(lst), defaultCfg(80))
+	flat := flattenLines(lines)
+	for _, n := range []string{"1.", "2.", "9.", "10.", "11.", "12."} {
+		if !strings.Contains(flat, n) {
+			t.Errorf("ordered list should contain %q, got: %q", n, flat)
+		}
+	}
+}
+
 func TestLayout_TaskList_CheckboxPresent(t *testing.T) {
 	checked := true
 	unchecked := false
