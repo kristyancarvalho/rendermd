@@ -1,13 +1,68 @@
 name: Feature Suggestion
-description: Sugest a feature or improvement
-title: "[TO IMPLEMENT] "
+description: Suggest a feature or improvement
+title: "[ENHANCEMENT] "
 labels: ["enhancement"]
 body:
-  - type: textarea
-    id: description
+  - type: dropdown
+    id: area
     attributes:
-      label: Description
-      description: What kind of feature do you want?
-      placeholder: Something that would be great to have
+      label: Area
+      description: Which part of the project should be improved?
+      options:
+        - config
+        - parser
+        - layout
+        - render
+        - ui
+        - input
+        - watch
+        - docs
+        - packaging
+        - release
+        - other
     validations:
       required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What issue or limitation does this improve?
+      placeholder: Explain why this change is useful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: What should be implemented or changed?
+      placeholder: Describe the feature or improvement.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Did you consider other approaches?
+      placeholder: Optional.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What needs to be true for this issue to be done?
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Optional implementation details, references, or edge cases.
+      placeholder: Add any extra context here.
