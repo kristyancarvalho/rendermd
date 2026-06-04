@@ -15,9 +15,9 @@ import (
 func Run(version string, args []string) error {
 	fs := flag.NewFlagSet("mdp", flag.ContinueOnError)
 	var (
-		watchFlag  = fs.Bool("watch", false, "enable hot reload on file change")
-		configFlag = fs.String("config", config.DefaultPath(), "path to config file")
-		themeFlag  = fs.String("theme", "", "theme name or path")
+		watchFlag   = fs.Bool("watch", false, "enable hot reload on file change")
+		configFlag  = fs.String("config", config.DefaultPath(), "path to config file")
+		themeFlag   = fs.String("theme", "", "theme name or path")
 		versionFlag = fs.Bool("version", false, "print version and exit")
 	)
 	fs.BoolVar(watchFlag, "w", false, "enable hot reload (short)")
@@ -38,7 +38,9 @@ func Run(version string, args []string) error {
 
 	cfg := config.Load(*configFlag)
 	if *themeFlag != "" {
-		cfg.Theme.Name = *themeFlag
+		for _, warning := range cfg.SetThemeName(*themeFlag) {
+			fmt.Fprintln(os.Stderr, warning.String())
+		}
 	}
 
 	var (

@@ -127,6 +127,18 @@ heading = "#ff0000"
 	}
 }
 
+func TestSetThemeNameUpdatesResolvedTheme(t *testing.T) {
+	cfg := defaults()
+	cfg.SetThemeName("light")
+
+	if cfg.Theme.Name != "light" {
+		t.Errorf("Theme.Name: want 'light', got %q", cfg.Theme.Name)
+	}
+	if cfg.ResolvedTheme().Background != "#fafafa" {
+		t.Errorf("ResolvedTheme.Background: want '#fafafa', got %q", cfg.ResolvedTheme().Background)
+	}
+}
+
 func TestLoad_PartialKeys(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.toml")
