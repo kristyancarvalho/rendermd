@@ -80,6 +80,22 @@ func (r *Renderer) Render(lines []layout.Line, vp Viewport) string {
 	return Render(lines, r.styles, vp)
 }
 
+func Sanitize(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if r == '\t' {
+			b.WriteRune(r)
+			continue
+		}
+		if r < 0x20 || r == 0x7f || (r >= 0x80 && r <= 0x9f) {
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
 func Render(lines []layout.Line, styles map[layout.StyleID]lipgloss.Style, vp Viewport) string {
 	start := vp.Offset
 	end := vp.Offset + vp.Height
@@ -105,7 +121,7 @@ func Render(lines []layout.Line, styles map[layout.StyleID]lipgloss.Style, vp Vi
 			if !ok {
 				st = lipgloss.NewStyle()
 			}
-			sb.WriteString(st.Render(seg.Text))
+			sb.WriteString(st.Render(Sanitize(seg.Text)))
 		}
 		if i < len(visible)-1 {
 			sb.WriteByte('\n')

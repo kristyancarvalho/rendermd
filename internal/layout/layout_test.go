@@ -348,6 +348,37 @@ func TestLayout_OrderedList_NumbersPresent(t *testing.T) {
 	}
 }
 
+func TestLayout_OrderedList_TenItems_NumbersPresent(t *testing.T) {
+	items := make([]model.ListItem, 10)
+	for i := range items {
+		items[i] = model.ListItem{Blocks: []model.Block{para("item")}}
+	}
+	lst := &model.List{Ordered: true, Items: items}
+	lines := Layout(doc(lst), defaultCfg(80))
+	flat := flattenLines(lines)
+	if !strings.Contains(flat, "10.") {
+		t.Errorf("ordered list with 10 items should contain '10.', got: %q", flat)
+	}
+	if strings.Contains(flat, ":") {
+		t.Errorf("ordered list item 10 must not render as ':' (rune arithmetic bug), got: %q", flat)
+	}
+}
+
+func TestLayout_OrderedList_MultiDigit_Alignment(t *testing.T) {
+	items := make([]model.ListItem, 12)
+	for i := range items {
+		items[i] = model.ListItem{Blocks: []model.Block{para("item")}}
+	}
+	lst := &model.List{Ordered: true, Items: items}
+	lines := Layout(doc(lst), defaultCfg(80))
+	flat := flattenLines(lines)
+	for _, n := range []string{"1.", "2.", "9.", "10.", "11.", "12."} {
+		if !strings.Contains(flat, n) {
+			t.Errorf("ordered list should contain %q, got: %q", n, flat)
+		}
+	}
+}
+
 func TestLayout_TaskList_CheckboxPresent(t *testing.T) {
 	checked := true
 	unchecked := false
@@ -469,5 +500,72 @@ func TestPadLeft(t *testing.T) {
 	}
 	if got := padLeft("10", 2); got != "10" {
 		t.Errorf("padLeft: want '10', got %q", got)
+	}
+}
+
+func TestWrapText_MultibyteLatin_FitsCorrectly(t *testing.T) {
+	lines := wrapText("café naïve", 80)
+	if len(lines) != 1 {
+		t.Errorf("short accented text should not wrap, got %d lines", len(lines))
+	}
+	if lines[0] != "café naïve" {
+		t.Errorf("want %q, got %q", "café naïve", lines[0])
+	}
+}
+
+func TestWrapText_CJK_WrapsAtVisualWidth(t *testing.T) {
+	lines := wrapText("abc 你好", 6)
+	if len(lines) != 2 {
+		t.Errorf("CJK: want 2 lines, got %d: %v", len(lines), lines)
+	}
+	if len(lines) >= 1 && lines[0] != "abc" {
+		t.Errorf("CJK first line: want 'abc', got %q", lines[0])
+	}
+	if len(lines) >= 2 && lines[1] != "你好" {
+		t.Errorf("CJK second line: want '你好', got %q", lines[1])
+	}
+}
+
+func TestWrapText_CJK_EachWordOnOwnLine(t *testing.T) {
+	lines := wrapText("你好 世界 中文", 5)
+	if len(lines) != 3 {
+		t.Errorf("want 3 lines, got %d: %v", len(lines), lines)
+	}
+	for i, l := range lines {
+		if len(strings.Fields(l)) > 1 {
+			t.Errorf("line %d should contain one word at width 5, got %q", i, l)
+		}
+	}
+}
+
+func TestWrapText_MixedASCIIAndWide(t *testing.T) {
+	lines := wrapText("hi 你好", 5)
+	if len(lines) != 2 {
+		t.Errorf("mixed ASCII+CJK: want 2 lines, got %d: %v", len(lines), lines)
+	}
+}
+
+func TestPadLeft_WideChars(t *testing.T) {
+	if got := padLeft("你好", 6); got != "  你好" {
+		t.Errorf("padLeft wide: want %q, got %q", "  你好", got)
+	}
+	if got := padLeft("你好", 4); got != "你好" {
+		t.Errorf("padLeft exact width: want %q, got %q", "你好", got)
+	}
+	if got := padLeft("你好世界", 4); got != "你好世界" {
+		t.Errorf("padLeft overflow: want %q, got %q", "你好世界", got)
+	}
+}
+
+func TestLayout_Paragraph_CJK_WrapsCorrectly(t *testing.T) {
+	lines := Layout(doc(para("你好 你好 你好")), LayoutConfig{Width: 10, Padding: 0, SoftWrap: true, HideSyntax: true})
+	content := 0
+	for _, l := range lines {
+		if !isEmptyLine(l) {
+			content++
+		}
+	}
+	if content < 2 {
+		t.Errorf("CJK paragraph should wrap to ≥2 content lines at width 10, got %d", content)
 	}
 }

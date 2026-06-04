@@ -101,17 +101,18 @@ func Load(path string) Config {
 	}
 
 	var overlay Config
-	if _, err := toml.Decode(string(data), &overlay); err != nil {
-		fmt.Fprintf(os.Stderr, "mdp: config parse error: %v\n", err)
+	meta, err2 := toml.Decode(string(data), &overlay)
+	if err2 != nil {
+		fmt.Fprintf(os.Stderr, "mdp: config parse error: %v\n", err2)
 		return cfg
 	}
 
-	cfg = merge(cfg, overlay)
+	cfg = merge(cfg, overlay, meta)
 	cfg.resolved = resolveTheme(cfg.Theme)
 	return cfg
 }
 
-func merge(base, overlay Config) Config {
+func merge(base, overlay Config, meta toml.MetaData) Config {
 	if overlay.UI.Padding != 0 {
 		base.UI.Padding = overlay.UI.Padding
 	}
@@ -124,9 +125,15 @@ func merge(base, overlay Config) Config {
 	if overlay.UI.MaxWidth != 0 {
 		base.UI.MaxWidth = overlay.UI.MaxWidth
 	}
-	base.UI.SoftWrap = overlay.UI.SoftWrap
-	base.UI.ShowLineNumbers = overlay.UI.ShowLineNumbers
-	base.UI.ShowURLs = overlay.UI.ShowURLs
+	if meta.IsDefined("ui", "soft_wrap") {
+		base.UI.SoftWrap = overlay.UI.SoftWrap
+	}
+	if meta.IsDefined("ui", "show_line_numbers") {
+		base.UI.ShowLineNumbers = overlay.UI.ShowLineNumbers
+	}
+	if meta.IsDefined("ui", "show_urls") {
+		base.UI.ShowURLs = overlay.UI.ShowURLs
+	}
 
 	if overlay.Theme.Name != "" {
 		base.Theme.Name = overlay.Theme.Name
@@ -183,7 +190,27 @@ func merge(base, overlay Config) Config {
 		base.Theme.SyntaxOperator = overlay.Theme.SyntaxOperator
 	}
 
-	base.Markdown = overlay.Markdown
+	if meta.IsDefined("markdown", "hide_syntax") {
+		base.Markdown.HideSyntax = overlay.Markdown.HideSyntax
+	}
+	if meta.IsDefined("markdown", "render_emphasis") {
+		base.Markdown.RenderEmphasis = overlay.Markdown.RenderEmphasis
+	}
+	if meta.IsDefined("markdown", "render_strong") {
+		base.Markdown.RenderStrong = overlay.Markdown.RenderStrong
+	}
+	if meta.IsDefined("markdown", "render_links") {
+		base.Markdown.RenderLinks = overlay.Markdown.RenderLinks
+	}
+	if meta.IsDefined("markdown", "render_images") {
+		base.Markdown.RenderImages = overlay.Markdown.RenderImages
+	}
+	if meta.IsDefined("markdown", "render_tables") {
+		base.Markdown.RenderTables = overlay.Markdown.RenderTables
+	}
+	if meta.IsDefined("markdown", "render_task_lists") {
+		base.Markdown.RenderTaskLists = overlay.Markdown.RenderTaskLists
+	}
 
 	if overlay.Keys.Up != "" {
 		base.Keys.Up = overlay.Keys.Up
@@ -225,7 +252,9 @@ func merge(base, overlay Config) Config {
 	if overlay.Watch.DebounceMs != 0 {
 		base.Watch.DebounceMs = overlay.Watch.DebounceMs
 	}
-	base.Watch.Enabled = overlay.Watch.Enabled
+	if meta.IsDefined("watch", "enabled") {
+		base.Watch.Enabled = overlay.Watch.Enabled
+	}
 
 	return base
 }

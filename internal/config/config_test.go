@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/BurntSushi/toml"
 )
 
 func TestDefaults(t *testing.T) {
@@ -118,7 +120,7 @@ heading = "#ff0000"
 		t.Fatal(err)
 	}
 	cfg := Load(cfgPath)
-	
+
 	thm := cfg.ResolvedTheme()
 	if thm.Heading != "#ff0000" {
 		t.Errorf("Heading override: want '#ff0000', got %q", thm.Heading)
@@ -147,7 +149,7 @@ up = "w"
 func TestMerge_PreservesUnsetFields(t *testing.T) {
 	base := defaults()
 	overlay := Config{}
-	result := merge(base, overlay)
+	result := merge(base, overlay, toml.MetaData{})
 
 	if result.UI.Padding != base.UI.Padding {
 		t.Errorf("Padding should be preserved: want %d, got %d", base.UI.Padding, result.UI.Padding)
@@ -161,5 +163,94 @@ func TestDefaultPath(t *testing.T) {
 	p := DefaultPath()
 	if p == "" {
 		t.Error("DefaultPath should not be empty")
+	}
+}
+
+func TestMerge_OmittedBoolsPreserveDefaults(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := "[ui]\npadding = 4\n"
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Load(cfgPath)
+	if !cfg.UI.SoftWrap {
+		t.Error("SoftWrap default (true) should be preserved when omitted")
+	}
+}
+
+func TestMerge_ExplicitFalseIsRespected(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := "[ui]\nsoft_wrap = false\n"
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Load(cfgPath)
+	if cfg.UI.SoftWrap {
+		t.Error("Explicit soft_wrap = false should be respected")
+	}
+}
+
+func TestMerge_OmittedMarkdownPreservesDefaults(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := "[theme]\nname = \"light\"\n"
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Load(cfgPath)
+	if !cfg.Markdown.HideSyntax {
+		t.Error("Markdown.HideSyntax default (true) should be preserved when [markdown] is omitted")
+	}
+	if !cfg.Markdown.RenderEmphasis {
+		t.Error("Markdown.RenderEmphasis default (true) should be preserved")
+	}
+	if !cfg.Markdown.RenderStrong {
+		t.Error("Markdown.RenderStrong default (true) should be preserved")
+	}
+	if !cfg.Markdown.RenderLinks {
+		t.Error("Markdown.RenderLinks default (true) should be preserved")
+	}
+	if !cfg.Markdown.RenderTables {
+		t.Error("Markdown.RenderTables default (true) should be preserved")
+	}
+	if !cfg.Markdown.RenderTaskLists {
+		t.Error("Markdown.RenderTaskLists default (true) should be preserved")
+	}
+}
+
+func TestMerge_ExplicitMarkdownFalseRespected(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := "[markdown]\nhide_syntax = false\nrender_tables = false\n"
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Load(cfgPath)
+	if cfg.Markdown.HideSyntax {
+		t.Error("Explicit hide_syntax = false should be respected")
+	}
+	if cfg.Markdown.RenderTables {
+		t.Error("Explicit render_tables = false should be respected")
+	}
+	if !cfg.Markdown.RenderEmphasis {
+		t.Error("Markdown.RenderEmphasis default should be preserved")
+	}
+}
+
+func TestMerge_OmittedWatchEnabledPreservesDefault(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := "[watch]\ndebounce_ms = 200\n"
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Load(cfgPath)
+	if !cfg.Watch.Enabled {
+		t.Error("Watch.Enabled default (true) should be preserved when omitted")
+	}
+	if cfg.Watch.DebounceMs != 200 {
+		t.Errorf("Watch.DebounceMs: want 200, got %d", cfg.Watch.DebounceMs)
 	}
 }

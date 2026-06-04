@@ -1,12 +1,13 @@
 package layout
 
 import (
+	"fmt"
 	"hash/fnv"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/kristyancarvalho/mdp/internal/model"
 	"github.com/kristyancarvalho/mdp/internal/syntax"
+	"github.com/mattn/go-runewidth"
 )
 
 type StyleID int
@@ -231,7 +232,7 @@ func renderList(lst *model.List, width int, cfg LayoutConfig) []Line {
 	for i, item := range lst.Items {
 		var marker string
 		if lst.Ordered {
-			marker = padLeft(strings.TrimSpace(string(rune('0'+i+1))), 2) + ". "
+			marker = padLeft(fmt.Sprintf("%d", i+1), 2) + ". "
 		} else {
 			marker = "• "
 		}
@@ -242,7 +243,7 @@ func renderList(lst *model.List, width int, cfg LayoutConfig) []Line {
 				marker = "[ ] "
 			}
 		}
-		markerWidth := utf8.RuneCountInString(marker)
+		markerWidth := runewidth.StringWidth(marker)
 		inner := width - markerWidth
 		if inner < 5 {
 			inner = 5
@@ -293,7 +294,7 @@ func renderTable(t *model.Table, width int, _ LayoutConfig) []Line {
 
 	colWidths := make([]int, nCols)
 	measureSpans := func(spans []model.Span) int {
-		return utf8.RuneCountInString(spansText(spans))
+		return runewidth.StringWidth(spansText(spans))
 	}
 	for i, h := range t.Headers {
 		if w := measureSpans(h); w > colWidths[i] {
@@ -331,7 +332,7 @@ func renderTable(t *model.Table, width int, _ LayoutConfig) []Line {
 
 	formatCell := func(spans []model.Span, col int) string {
 		text := spansText(spans)
-		w := utf8.RuneCountInString(text)
+		w := runewidth.StringWidth(text)
 		max := colWidths[col]
 		if w > max {
 			runes := []rune(text)
@@ -434,17 +435,21 @@ func wrapText(text string, width int) []string {
 	}
 	var lines []string
 	var cur strings.Builder
+	curWidth := 0
 	for _, w := range words {
-		wl := utf8.RuneCountInString(w)
+		wl := runewidth.StringWidth(w)
 		if cur.Len() == 0 {
 			cur.WriteString(w)
-		} else if cur.Len()+1+wl <= width {
+			curWidth = wl
+		} else if curWidth+1+wl <= width {
 			cur.WriteByte(' ')
 			cur.WriteString(w)
+			curWidth += 1 + wl
 		} else {
 			lines = append(lines, cur.String())
 			cur.Reset()
 			cur.WriteString(w)
+			curWidth = wl
 		}
 	}
 	if cur.Len() > 0 {
@@ -501,7 +506,7 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 			if (curWidth > 0 || (wi == 0 && leadingSpace)) && wi >= 0 {
 				spaceNeeded = 1
 			}
-			wl := utf8.RuneCountInString(word)
+			wl := runewidth.StringWidth(word)
 			if curWidth > 0 && curWidth+spaceNeeded+wl > width {
 				flushLine()
 				spaceNeeded = 0
@@ -511,7 +516,7 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 				text = " " + word
 			}
 			curLine = append(curLine, Segment{Text: text, Style: ch.style})
-			curWidth += utf8.RuneCountInString(text)
+			curWidth += runewidth.StringWidth(text)
 		}
 	}
 	if len(curLine) > 0 {
@@ -524,7 +529,7 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 }
 
 func padLeft(s string, n int) string {
-	w := utf8.RuneCountInString(s)
+	w := runewidth.StringWidth(s)
 	if w >= n {
 		return s
 	}
