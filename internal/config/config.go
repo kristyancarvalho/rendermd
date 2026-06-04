@@ -108,8 +108,65 @@ func Load(path string) Config {
 	}
 
 	cfg = merge(cfg, overlay, meta)
+
+	warnings := validateThemeConfig(&cfg.Theme)
+	for _, w := range warnings {
+		fmt.Fprintln(os.Stderr, w.String())
+	}
+
 	cfg.resolved = resolveTheme(cfg.Theme)
 	return cfg
+}
+
+func validateThemeConfig(tc *ThemeConfig) []theme.ValidationWarning {
+	var warnings []theme.ValidationWarning
+
+	validName, nameWarnings := theme.ValidateThemeName(tc.Name)
+	warnings = append(warnings, nameWarnings...)
+	tc.Name = validName
+
+	overrides := &theme.Theme{
+		Background:     tc.Background,
+		Text:           tc.Text,
+		Muted:          tc.Muted,
+		Heading:        tc.Heading,
+		Accent:         tc.Accent,
+		Link:           tc.Link,
+		LinkURL:        tc.LinkURL,
+		CodeBg:         tc.CodeBg,
+		QuoteBg:        tc.QuoteBg,
+		Border:         tc.Border,
+		SyntaxKeyword:  tc.SyntaxKeyword,
+		SyntaxString:   tc.SyntaxString,
+		SyntaxComment:  tc.SyntaxComment,
+		SyntaxNumber:   tc.SyntaxNumber,
+		SyntaxType:     tc.SyntaxType,
+		SyntaxBuiltin:  tc.SyntaxBuiltin,
+		SyntaxOperator: tc.SyntaxOperator,
+	}
+
+	colorWarnings := theme.ValidateColorOverrides(overrides)
+	warnings = append(warnings, colorWarnings...)
+
+	tc.Background = overrides.Background
+	tc.Text = overrides.Text
+	tc.Muted = overrides.Muted
+	tc.Heading = overrides.Heading
+	tc.Accent = overrides.Accent
+	tc.Link = overrides.Link
+	tc.LinkURL = overrides.LinkURL
+	tc.CodeBg = overrides.CodeBg
+	tc.QuoteBg = overrides.QuoteBg
+	tc.Border = overrides.Border
+	tc.SyntaxKeyword = overrides.SyntaxKeyword
+	tc.SyntaxString = overrides.SyntaxString
+	tc.SyntaxComment = overrides.SyntaxComment
+	tc.SyntaxNumber = overrides.SyntaxNumber
+	tc.SyntaxType = overrides.SyntaxType
+	tc.SyntaxBuiltin = overrides.SyntaxBuiltin
+	tc.SyntaxOperator = overrides.SyntaxOperator
+
+	return warnings
 }
 
 func merge(base, overlay Config, meta toml.MetaData) Config {

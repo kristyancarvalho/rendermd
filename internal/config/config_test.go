@@ -254,3 +254,135 @@ func TestMerge_OmittedWatchEnabledPreservesDefault(t *testing.T) {
 		t.Errorf("Watch.DebounceMs: want 200, got %d", cfg.Watch.DebounceMs)
 	}
 }
+
+func TestValidateThemeConfig_InvalidThemeName_FallsBackToDefault(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := "[theme]\nname = \"monokai\"\n"
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Load(cfgPath)
+	if cfg.Theme.Name != "default" {
+		t.Errorf("invalid theme name should fall back to 'default', got %q", cfg.Theme.Name)
+	}
+}
+
+func TestValidateThemeConfig_ValidThemeNames_Accepted(t *testing.T) {
+	for _, name := range []string{"default", "light"} {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.toml")
+		content := "[theme]\nname = \"" + name + "\"\n"
+		if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+		cfg := Load(cfgPath)
+		if cfg.Theme.Name != name {
+			t.Errorf("valid theme name %q should be kept, got %q", name, cfg.Theme.Name)
+		}
+	}
+}
+
+func TestValidateThemeConfig_InvalidColor_ClearedBeforeResolve(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := "[theme]\nname = \"default\"\nheading = \"notacolor\"\n"
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Load(cfgPath)
+	thm := cfg.ResolvedTheme()
+	if thm.Heading == "notacolor" {
+		t.Error("invalid heading color should not reach the resolved theme")
+	}
+	if thm.Heading == "" {
+		t.Error("cleared invalid color should fall back to theme default, not remain empty")
+	}
+}
+
+func TestValidateThemeConfig_ValidColor_Applied(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := "[theme]\nname = \"default\"\nheading = \"#aabbcc\"\n"
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Load(cfgPath)
+	thm := cfg.ResolvedTheme()
+	if thm.Heading != "#aabbcc" {
+		t.Errorf("valid heading color should be applied, got %q", thm.Heading)
+	}
+}
+
+func TestValidateThemeConfig_ValidANSI256_Applied(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := "[theme]\nname = \"default\"\nheading = \"128\"\n"
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Load(cfgPath)
+	thm := cfg.ResolvedTheme()
+	if thm.Heading != "128" {
+		t.Errorf("valid ANSI 256 heading color should be applied, got %q", thm.Heading)
+	}
+}
+
+func TestValidateThemeConfig_MultipleInvalidColors_AllCleared(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := `[theme]
+name = "default"
+heading = "bad"
+text = "also-bad"
+background = "#ab1234"
+`
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Load(cfgPath)
+	if cfg.Theme.Heading != "" {
+		t.Errorf("invalid heading should be cleared, got %q", cfg.Theme.Heading)
+	}
+	if cfg.Theme.Text != "" {
+		t.Errorf("invalid text should be cleared, got %q", cfg.Theme.Text)
+	}
+	if cfg.Theme.Background != "#ab1234" {
+		t.Errorf("valid background should be preserved, got %q", cfg.Theme.Background)
+	}
+}
+
+func TestValidateThemeConfig_Internal_ReturnsWarningsForBadName(t *testing.T) {
+	tc := &ThemeConfig{Name: "unknown-theme"}
+	warnings := validateThemeConfig(tc)
+	if len(warnings) == 0 {
+		t.Error("expected at least one warning for unknown theme name")
+	}
+	if tc.Name != "default" {
+		t.Errorf("invalid theme name should be reset to 'default', got %q", tc.Name)
+	}
+}
+
+func TestValidateThemeConfig_Internal_ReturnsWarningsForBadColor(t *testing.T) {
+	tc := &ThemeConfig{Name: "default", Heading: "rgb(0,0,0)"}
+	warnings := validateThemeConfig(tc)
+	if len(warnings) == 0 {
+		t.Error("expected at least one warning for invalid color format")
+	}
+	if tc.Heading != "" {
+		t.Errorf("invalid color should be cleared to empty, got %q", tc.Heading)
+	}
+}
+
+func TestValidateThemeConfig_Internal_NoWarningsForValidConfig(t *testing.T) {
+	tc := &ThemeConfig{
+		Name:       "light",
+		Background: "#fafafa",
+		Heading:    "#1a56db",
+		Text:       "16",
+	}
+	warnings := validateThemeConfig(tc)
+	if len(warnings) != 0 {
+		t.Errorf("expected no warnings for valid config, got %d: %v", len(warnings), warnings)
+	}
+}
