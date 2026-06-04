@@ -37,6 +37,7 @@ type uiModel struct {
 	queryBuf  string
 	hits      []int
 	hitIndex  int
+	searchIdx []string
 	thm       theme.Theme
 	cfg       config.Config
 	watcher   *watch.Watcher
@@ -178,7 +179,7 @@ func (m *uiModel) handleSearchKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.hits = nil
 	case "enter":
 		m.query = m.queryBuf
-		m.hits = findHits(m.lines, m.query)
+		m.hits = findHits(m.searchIdx, m.query)
 		m.hitIndex = 0
 		m.state = input.StateNormal
 		if len(m.hits) > 0 {
@@ -317,8 +318,9 @@ func (m *uiModel) reLayout() {
 		HideSyntax: m.cfg.Markdown.HideSyntax,
 	}
 	m.lines = m.engine.Render(m.doc, cfg)
+	m.searchIdx = buildSearchIndex(m.lines)
 	if m.query != "" {
-		m.hits = findHits(m.lines, m.query)
+		m.hits = findHits(m.searchIdx, m.query)
 	}
 }
 
@@ -344,18 +346,27 @@ func (m *uiModel) nextHit(dir int) {
 	m.viewport.Offset = m.hits[m.hitIndex]
 }
 
-func findHits(lines []layout.Line, query string) []int {
+func buildSearchIndex(lines []layout.Line) []string {
+	idx := make([]string, len(lines))
+	for i, line := range lines {
+		var sb strings.Builder
+		for _, seg := range line.Segments {
+			sb.WriteString(seg.Text)
+		}
+		idx[i] = strings.ToLower(sb.String())
+	}
+	return idx
+}
+
+func findHits(index []string, query string) []int {
 	if query == "" {
 		return nil
 	}
 	q := strings.ToLower(query)
 	var hits []int
-	for i, line := range lines {
-		for _, seg := range line.Segments {
-			if strings.Contains(strings.ToLower(seg.Text), q) {
-				hits = append(hits, i)
-				break
-			}
+	for i, text := range index {
+		if strings.Contains(text, q) {
+			hits = append(hits, i)
 		}
 	}
 	return hits
