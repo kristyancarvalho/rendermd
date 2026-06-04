@@ -55,7 +55,7 @@ func TestWatcher_FiresOnWrite(t *testing.T) {
 
 	select {
 	case <-w.Events:
-		
+
 	case <-time.After(2 * time.Second):
 		t.Error("expected file-change event within 2s, got none")
 	}
@@ -114,6 +114,41 @@ loop:
 	}
 	if events >= 5 {
 		t.Errorf("debounce should coalesce events; got %d (one per write)", events)
+	}
+}
+
+func TestWatcher_DebounceBurstFiresOnce(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "burst.md")
+	if err := os.WriteFile(f, []byte("v0"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	debounce := 120 * time.Millisecond
+	w, err := New(f, debounce)
+	if err != nil {
+		t.Fatalf("failed to create watcher: %v", err)
+	}
+	defer w.Close()
+
+	time.Sleep(50 * time.Millisecond)
+	for i := 0; i < 4; i++ {
+		if err := os.WriteFile(f, []byte{byte('a' + i)}, 0644); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	select {
+	case <-w.Events:
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected one debounced event")
+	}
+
+	select {
+	case <-w.Events:
+		t.Fatal("expected burst writes to produce one debounced event")
+	case <-time.After(debounce * 2):
 	}
 }
 
