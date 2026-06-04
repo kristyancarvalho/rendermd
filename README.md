@@ -107,6 +107,7 @@ soft_wrap         = true
 max_width         = 96
 show_line_numbers = false
 show_urls         = false
+mouse             = true
 
 [theme]
 name       = "default"

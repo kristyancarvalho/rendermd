@@ -2,7 +2,10 @@ package ui
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"unicode/utf8"
 
@@ -16,6 +19,7 @@ import (
 	"github.com/kristyancarvalho/rendermd/internal/render"
 	"github.com/kristyancarvalho/rendermd/internal/theme"
 	"github.com/kristyancarvalho/rendermd/internal/watch"
+	"github.com/mattn/go-runewidth"
 )
 
 type watchMsg struct{}
@@ -62,7 +66,11 @@ func Run(filename string, content []byte, cfg config.Config, w *watch.Watcher) e
 		watcher:  w,
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	options := []tea.ProgramOption{tea.WithAltScreen()}
+	if cfg.UI.Mouse {
+		options = append(options, tea.WithMouseCellMotion())
+	}
+	p := tea.NewProgram(m, options...)
 
 	if w != nil {
 		go func() {
@@ -104,8 +112,30 @@ func (m *uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case errMsg:
 		m.lastErr = msg.err
+	case tea.MouseMsg:
+		return m.handleMouse(msg)
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+	}
+	return m, nil
+}
+
+func (m *uiModel) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if !m.cfg.UI.Mouse {
+		return m, nil
+	}
+	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
+		raw := linkAt(m.lines, m.viewport, msg.X, msg.Y)
+		if raw == "" {
+			return m, nil
+		}
+		cmd, err := openURLCmd(raw)
+		if err != nil {
+			m.lastErr = err
+			return m, nil
+		}
+		m.lastErr = nil
+		return m, cmd
 	}
 	return m, nil
 }
@@ -370,6 +400,53 @@ func findHits(index []string, query string) []int {
 		}
 	}
 	return hits
+}
+
+func linkAt(lines []layout.Line, vp render.Viewport, x, y int) string {
+	if y < 0 || y >= vp.Height {
+		return ""
+	}
+	row := vp.Offset + y
+	if row < 0 || row >= len(lines) {
+		return ""
+	}
+	pos := lines[row].Indent
+	for _, seg := range lines[row].Segments {
+		w := runewidth.StringWidth(seg.Text)
+		if seg.URL != "" && x >= pos && x < pos+w {
+			return seg.URL
+		}
+		pos += w
+	}
+	return ""
+}
+
+func openURLCmd(raw string) (tea.Cmd, error) {
+	parsed, err := url.ParseRequestURI(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %s", raw)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" && parsed.Scheme != "mailto" {
+		return nil, fmt.Errorf("unsupported URL: %s", raw)
+	}
+	cmdName, args := openCommand(raw)
+	return func() tea.Msg {
+		if err := exec.Command(cmdName, args...).Start(); err != nil {
+			return errMsg{err: err}
+		}
+		return nil
+	}, nil
+}
+
+func openCommand(raw string) (string, []string) {
+	switch runtime.GOOS {
+	case "darwin":
+		return "open", []string{raw}
+	case "windows":
+		return "rundll32", []string{"url.dll,FileProtocolHandler", raw}
+	default:
+		return "xdg-open", []string{raw}
+	}
 }
 
 func toKeymap(k config.KeysConfig) input.Keymap {

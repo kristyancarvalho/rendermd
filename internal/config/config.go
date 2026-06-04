@@ -26,6 +26,7 @@ type UIConfig struct {
 	MaxWidth        int  `toml:"max_width"`
 	ShowLineNumbers bool `toml:"show_line_numbers"`
 	ShowURLs        bool `toml:"show_urls"`
+	Mouse           bool `toml:"mouse"`
 }
 
 type ThemeConfig struct {
@@ -197,6 +198,9 @@ func merge(base, overlay Config, meta toml.MetaData) Config {
 	}
 	if meta.IsDefined("ui", "show_urls") {
 		base.UI.ShowURLs = overlay.UI.ShowURLs
+	}
+	if meta.IsDefined("ui", "mouse") {
+		base.UI.Mouse = overlay.UI.Mouse
 	}
 
 	if overlay.Theme.Name != "" {

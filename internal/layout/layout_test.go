@@ -161,6 +161,24 @@ func TestLayout_InlineFormatting_SpanBoundarySpacing(t *testing.T) {
 	}
 }
 
+func TestLayout_LinkSegmentsKeepURL(t *testing.T) {
+	p := &model.Paragraph{Spans: []model.Span{
+		&model.Link{Label: []model.Span{&model.Text{Value: "site"}}, URL: "https://example.com"},
+	}}
+	lines := Layout(doc(p), defaultCfg(80))
+	for _, l := range lines {
+		for _, seg := range l.Segments {
+			if seg.Style == StyleLink {
+				if seg.URL != "https://example.com" {
+					t.Errorf("link segment URL: want %q, got %q", "https://example.com", seg.URL)
+				}
+				return
+			}
+		}
+	}
+	t.Fatal("link segment not found")
+}
+
 func TestLayout_CodeBlock_ContainsCodeText(t *testing.T) {
 	lines := Layout(doc(code("go", "x := 1", "y := 2")), defaultCfg(80))
 	full := flattenLines(lines)

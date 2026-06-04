@@ -42,6 +42,7 @@ const (
 type Segment struct {
 	Text  string
 	Style StyleID
+	URL   string
 }
 
 type Line struct {
@@ -224,7 +225,7 @@ func quoteLine(line Line, width int) Line {
 		segs = append(segs, Segment{Text: strings.Repeat(" ", line.Indent), Style: StyleQuote})
 	}
 	for _, seg := range line.Segments {
-		segs = append(segs, Segment{Text: seg.Text, Style: StyleQuote})
+		segs = append(segs, Segment{Text: seg.Text, Style: StyleQuote, URL: seg.URL})
 	}
 	used := segmentsWidth(segs)
 	if used < width {
@@ -476,25 +477,26 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 	type chunk struct {
 		text  string
 		style StyleID
+		url   string
 	}
 	var chunks []chunk
 	for _, s := range spans {
 		switch v := s.(type) {
 		case *model.Text:
-			chunks = append(chunks, chunk{v.Value, StyleNormal})
+			chunks = append(chunks, chunk{text: v.Value, style: StyleNormal})
 		case *model.Emphasis:
-			chunks = append(chunks, chunk{spansText(v.Children), StyleEmphasis})
+			chunks = append(chunks, chunk{text: spansText(v.Children), style: StyleEmphasis})
 		case *model.Strong:
-			chunks = append(chunks, chunk{spansText(v.Children), StyleStrong})
+			chunks = append(chunks, chunk{text: spansText(v.Children), style: StyleStrong})
 		case *model.InlineCode:
-			chunks = append(chunks, chunk{v.Value, StyleInlineCode})
+			chunks = append(chunks, chunk{text: v.Value, style: StyleInlineCode})
 		case *model.Link:
-			chunks = append(chunks, chunk{spansText(v.Label), StyleLink})
+			chunks = append(chunks, chunk{text: spansText(v.Label), style: StyleLink, url: v.URL})
 			if cfg.ShowURLs && v.URL != spansText(v.Label) {
-				chunks = append(chunks, chunk{" (" + v.URL + ")", StyleLinkURL})
+				chunks = append(chunks, chunk{text: " (" + v.URL + ")", style: StyleLinkURL, url: v.URL})
 			}
 		case *model.HardBreak:
-			chunks = append(chunks, chunk{"\n", StyleNormal})
+			chunks = append(chunks, chunk{text: "\n", style: StyleNormal})
 		}
 	}
 
@@ -530,7 +532,7 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 			if spaceNeeded > 0 && curWidth > 0 {
 				text = " " + word
 			}
-			curLine = append(curLine, Segment{Text: text, Style: ch.style})
+			curLine = append(curLine, Segment{Text: text, Style: ch.style, URL: ch.url})
 			curWidth += runewidth.StringWidth(text)
 			pendingSpace = false
 		}

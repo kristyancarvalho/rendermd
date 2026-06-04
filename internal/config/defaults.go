@@ -12,6 +12,7 @@ func defaults() Config {
 			MaxWidth:        96,
 			ShowLineNumbers: false,
 			ShowURLs:        false,
+			Mouse:           true,
 		},
 		Theme: ThemeConfig{
 			Name: "default",
