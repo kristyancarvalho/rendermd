@@ -186,6 +186,32 @@ func TestLayout_CodeBlock_LinesPreserved(t *testing.T) {
 	}
 }
 
+func TestLayout_CodeBlock_PaddingUsesCodeStyle(t *testing.T) {
+	lines := Layout(doc(code("go", "x := 1")), defaultCfg(20))
+	var codeLine Line
+	for _, l := range lines {
+		if strings.Contains(flattenLine(l), "x := 1") {
+			codeLine = l
+			break
+		}
+	}
+	if len(codeLine.Segments) == 0 {
+		t.Fatal("code line not found")
+	}
+	if codeLine.Indent != 0 {
+		t.Errorf("code padding should be emitted as styled text, got indent %d", codeLine.Indent)
+	}
+	if segmentsWidth(codeLine.Segments) != 20 {
+		t.Errorf("code line should fill width 20, got %d", segmentsWidth(codeLine.Segments))
+	}
+	if codeLine.Segments[0].Style != StyleCodeBlock {
+		t.Errorf("leading code padding should use StyleCodeBlock, got %d", codeLine.Segments[0].Style)
+	}
+	if codeLine.Segments[len(codeLine.Segments)-1].Style != StyleCodeBlock {
+		t.Errorf("trailing code padding should use StyleCodeBlock, got %d", codeLine.Segments[len(codeLine.Segments)-1].Style)
+	}
+}
+
 func TestLayout_CodeBlock_SurroundedByBlanks(t *testing.T) {
 	lines := Layout(doc(code("", "line")), defaultCfg(80))
 	if len(lines) < 3 {
@@ -367,6 +393,29 @@ func TestLayout_UnorderedList_BulletPresent(t *testing.T) {
 	if bullets < 2 {
 		t.Errorf("expected at least 2 bullet markers, got %d", bullets)
 	}
+}
+
+func TestLayout_List_MarkersDoNotUseLineIndent(t *testing.T) {
+	lst := &model.List{
+		Ordered: false,
+		Items: []model.ListItem{
+			{Blocks: []model.Block{para("item one")}},
+		},
+	}
+	lines := Layout(doc(lst), defaultCfg(80))
+	for _, l := range lines {
+		if !strings.Contains(flattenLine(l), "item one") {
+			continue
+		}
+		if l.Indent != 0 {
+			t.Errorf("list marker alignment should be in text segments, got indent %d", l.Indent)
+		}
+		if !strings.HasPrefix(flattenLine(l), "• item one") {
+			t.Errorf("list line should start with marker, got %q", flattenLine(l))
+		}
+		return
+	}
+	t.Fatal("list item line not found")
 }
 
 func TestLayout_OrderedList_NumbersPresent(t *testing.T) {

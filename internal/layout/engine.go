@@ -172,7 +172,7 @@ func kindToStyle(k syntax.TokenKind) StyleID {
 	}
 }
 
-func renderCodeBlock(c *model.CodeBlock, _ int, cfg LayoutConfig) []Line {
+func renderCodeBlock(c *model.CodeBlock, width int, cfg LayoutConfig) []Line {
 	var lines []Line
 	lines = append(lines, emptyLine())
 
@@ -184,21 +184,18 @@ func renderCodeBlock(c *model.CodeBlock, _ int, cfg LayoutConfig) []Line {
 
 	for _, l := range c.Lines {
 		tokens := syntax.Tokenize(c.Lang, l)
-		segs := make([]Segment, 0, len(tokens))
-		for i, tok := range tokens {
-			text := tok.Text
-			if i == 0 {
-				text = " " + text
-			}
+		segs := []Segment{{Text: " ", Style: StyleCodeBlock}}
+		for _, tok := range tokens {
 			segs = append(segs, Segment{
-				Text:  text,
+				Text:  tok.Text,
 				Style: kindToStyle(tok.Kind),
 			})
 		}
-		if len(segs) == 0 {
-			segs = []Segment{{Text: " ", Style: StyleCodeBlock}}
+		used := segmentsWidth(segs)
+		if used < width {
+			segs = append(segs, Segment{Text: strings.Repeat(" ", width-used), Style: StyleCodeBlock})
 		}
-		lines = append(lines, Line{Segments: segs, Indent: 1})
+		lines = append(lines, Line{Segments: segs})
 	}
 
 	lines = append(lines, emptyLine())
@@ -272,13 +269,13 @@ func renderList(lst *model.List, width int, cfg LayoutConfig) []Line {
 					continue
 				}
 				if first {
-					nl := Line{Indent: l.Indent + markerWidth}
-					nl.Segments = append([]Segment{{Text: marker, Style: StyleNormal}}, l.Segments...)
+					nl := Line{}
+					nl.Segments = append([]Segment{{Text: marker + strings.Repeat(" ", l.Indent), Style: StyleNormal}}, l.Segments...)
 					lines = append(lines, nl)
 					first = false
 				} else {
-					nl := Line{Indent: l.Indent + markerWidth}
-					nl.Segments = append([]Segment{{Text: strings.Repeat(" ", markerWidth), Style: StyleNormal}}, l.Segments...)
+					nl := Line{}
+					nl.Segments = append([]Segment{{Text: strings.Repeat(" ", markerWidth+l.Indent), Style: StyleNormal}}, l.Segments...)
 					lines = append(lines, nl)
 				}
 			}
