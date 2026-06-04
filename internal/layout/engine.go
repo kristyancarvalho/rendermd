@@ -487,11 +487,13 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 	var lines []Line
 	var curLine []Segment
 	curWidth := 0
+	pendingSpace := false
 
 	flushLine := func() {
 		lines = append(lines, Line{Segments: curLine})
 		curLine = nil
 		curWidth = 0
+		pendingSpace = false
 	}
 
 	for _, ch := range chunks {
@@ -499,11 +501,10 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 			flushLine()
 			continue
 		}
-		words := strings.Fields(ch.text)
-		leadingSpace := len(ch.text) > 0 && ch.text[0] == ' '
+		words, spaces, trailingSpace := inlineTokens(ch.text)
 		for wi, word := range words {
 			spaceNeeded := 0
-			if (curWidth > 0 || (wi == 0 && leadingSpace)) && wi >= 0 {
+			if (pendingSpace || spaces[wi]) && curWidth > 0 {
 				spaceNeeded = 1
 			}
 			wl := runewidth.StringWidth(word)
@@ -517,6 +518,10 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 			}
 			curLine = append(curLine, Segment{Text: text, Style: ch.style})
 			curWidth += runewidth.StringWidth(text)
+			pendingSpace = false
+		}
+		if trailingSpace {
+			pendingSpace = true
 		}
 	}
 	if len(curLine) > 0 {
@@ -526,6 +531,31 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 		lines = append(lines, Line{Segments: []Segment{{Text: "", Style: StyleNormal}}})
 	}
 	return lines
+}
+
+func inlineTokens(text string) ([]string, []bool, bool) {
+	var words []string
+	var spaces []bool
+	var cur strings.Builder
+	pendingSpace := false
+	for _, r := range text {
+		if r == ' ' || r == '\t' || r == '\n' || r == '\r' {
+			if cur.Len() > 0 {
+				words = append(words, cur.String())
+				spaces = append(spaces, pendingSpace)
+				cur.Reset()
+			}
+			pendingSpace = true
+			continue
+		}
+		cur.WriteRune(r)
+	}
+	if cur.Len() > 0 {
+		words = append(words, cur.String())
+		spaces = append(spaces, pendingSpace)
+		pendingSpace = false
+	}
+	return words, spaces, pendingSpace
 }
 
 func padLeft(s string, n int) string {

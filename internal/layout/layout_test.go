@@ -125,6 +125,42 @@ func TestLayout_Paragraph_Wrapping(t *testing.T) {
 	}
 }
 
+func TestLayout_InlineFormatting_PunctuationSpacing(t *testing.T) {
+	p := &model.Paragraph{Spans: []model.Span{
+		&model.Strong{Children: []model.Span{&model.Text{Value: "bold"}}},
+		&model.Text{Value: ", "},
+		&model.Emphasis{Children: []model.Span{&model.Text{Value: "italic"}}},
+		&model.Text{Value: ", "},
+		&model.InlineCode{Value: "code"},
+		&model.Text{Value: ", "},
+		&model.Link{Label: []model.Span{&model.Text{Value: "link"}}, URL: "https://example.com"},
+		&model.Text{Value: "."},
+	}}
+	lines := Layout(doc(p), defaultCfg(80))
+	flat := flattenLines(lines)
+	want := "bold, italic, code, link."
+	if !strings.Contains(flat, want) {
+		t.Errorf("inline punctuation should remain attached: want %q in %q", want, flat)
+	}
+	if strings.Contains(flat, " ,") || strings.Contains(flat, " .") {
+		t.Errorf("inline punctuation should not have leading spaces, got %q", flat)
+	}
+}
+
+func TestLayout_InlineFormatting_SpanBoundarySpacing(t *testing.T) {
+	p := &model.Paragraph{Spans: []model.Span{
+		&model.Text{Value: "plain "},
+		&model.Strong{Children: []model.Span{&model.Text{Value: "bold"}}},
+		&model.Text{Value: " text"},
+	}}
+	lines := Layout(doc(p), defaultCfg(80))
+	flat := flattenLines(lines)
+	want := "plain bold text"
+	if !strings.Contains(flat, want) {
+		t.Errorf("inline whitespace should survive span boundaries: want %q in %q", want, flat)
+	}
+}
+
 func TestLayout_CodeBlock_ContainsCodeText(t *testing.T) {
 	lines := Layout(doc(code("go", "x := 1", "y := 2")), defaultCfg(80))
 	full := flattenLines(lines)
