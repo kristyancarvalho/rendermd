@@ -453,6 +453,74 @@ func TestLayout_Quote_HasBarPrefix(t *testing.T) {
 	}
 }
 
+func TestLayout_Quote_StylesCompleteLine(t *testing.T) {
+	q := &model.Quote{Blocks: []model.Block{para("quoted text")}}
+	lines := Layout(doc(q), defaultCfg(24))
+	found := false
+	for _, l := range lines {
+		if !strings.Contains(flattenLine(l), "quoted text") {
+			continue
+		}
+		found = true
+		if segmentsWidth(l.Segments) != 24 {
+			t.Errorf("quote line should fill width 24, got %d", segmentsWidth(l.Segments))
+		}
+		for _, seg := range l.Segments {
+			if seg.Style != StyleQuote {
+				t.Errorf("quote line segment should have StyleQuote, got %d", seg.Style)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("quote text line not found")
+	}
+}
+
+func TestLayout_Quote_WrappedLinesUseQuoteStyle(t *testing.T) {
+	q := &model.Quote{Blocks: []model.Block{para("one two three four five six seven")}}
+	lines := Layout(doc(q), defaultCfg(14))
+	styledWrapped := 0
+	for _, l := range lines {
+		if !strings.Contains(flattenLine(l), "▎") || isEmptyLine(l) {
+			continue
+		}
+		allQuote := true
+		for _, seg := range l.Segments {
+			if seg.Style != StyleQuote {
+				allQuote = false
+			}
+		}
+		if allQuote {
+			styledWrapped++
+		}
+	}
+	if styledWrapped < 2 {
+		t.Errorf("wrapped quote should produce multiple quote-styled lines, got %d", styledWrapped)
+	}
+}
+
+func TestLayout_Quote_NestedQuotesKeepMarkers(t *testing.T) {
+	q := &model.Quote{Blocks: []model.Block{
+		&model.Quote{Blocks: []model.Block{para("nested")}},
+	}}
+	lines := Layout(doc(q), defaultCfg(30))
+	found := false
+	for _, l := range lines {
+		flat := flattenLine(l)
+		if strings.Contains(flat, "▎ ▎") && strings.Contains(flat, "nested") {
+			found = true
+			for _, seg := range l.Segments {
+				if seg.Style != StyleQuote {
+					t.Errorf("nested quote segment should have StyleQuote, got %d", seg.Style)
+				}
+			}
+		}
+	}
+	if !found {
+		t.Error("nested quote should retain both quote markers")
+	}
+}
+
 func TestLayout_Table_HeadersPresent(t *testing.T) {
 	tbl := &model.Table{
 		Headers: [][]model.Span{

@@ -214,17 +214,34 @@ func renderQuote(q *model.Quote, width int, cfg LayoutConfig) []Line {
 	}
 	for _, b := range q.Blocks {
 		for _, l := range renderBlock(b, inner, cfg) {
-			if len(l.Segments) == 0 {
-				lines = append(lines, Line{Segments: []Segment{{Text: "\u258e ", Style: StyleQuote}}})
-				continue
-			}
-			prefixed := Line{Indent: l.Indent}
-			prefixed.Segments = append([]Segment{{Text: "\u258e ", Style: StyleQuote}}, l.Segments...)
-			lines = append(lines, prefixed)
+			lines = append(lines, quoteLine(l, width))
 		}
 	}
 	lines = append(lines, emptyLine())
 	return lines
+}
+
+func quoteLine(line Line, width int) Line {
+	segs := []Segment{{Text: "\u258e ", Style: StyleQuote}}
+	if line.Indent > 0 {
+		segs = append(segs, Segment{Text: strings.Repeat(" ", line.Indent), Style: StyleQuote})
+	}
+	for _, seg := range line.Segments {
+		segs = append(segs, Segment{Text: seg.Text, Style: StyleQuote})
+	}
+	used := segmentsWidth(segs)
+	if used < width {
+		segs = append(segs, Segment{Text: strings.Repeat(" ", width-used), Style: StyleQuote})
+	}
+	return Line{Segments: segs}
+}
+
+func segmentsWidth(segs []Segment) int {
+	width := 0
+	for _, seg := range segs {
+		width += runewidth.StringWidth(seg.Text)
+	}
+	return width
 }
 
 func renderList(lst *model.List, width int, cfg LayoutConfig) []Line {
