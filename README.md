@@ -36,6 +36,23 @@ go install github.com/kristyancarvalho/mdp/cmd/mdp@latest
 
 This installs the binary into `$GOBIN`, or `$GOPATH/bin` when `GOBIN` is not set.
 
+### Arch Linux
+
+Arch users can build the AUR package metadata from `packaging/aur`.
+
+```sh
+cd packaging/aur
+makepkg -si
+```
+
+After the package is submitted to AUR:
+
+```sh
+paru -S mdp-pager
+```
+
+The AUR package name is `mdp-pager` because Arch already ships a different package named `mdp`. The package installs this project as `/usr/bin/mdp` and conflicts with Arch's `mdp` package.
+
 ## Usage
 
 ```sh

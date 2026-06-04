@@ -1,0 +1,16 @@
+pkgbase = mdp-pager
+	pkgdesc = Terminal Markdown pager with syntax-aware rendering, hot reload, and fuzzy search
+	pkgver = 1.1.0
+	pkgrel = 1
+	url = https://github.com/kristyancarvalho/mdp
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = go
+	depends = glibc
+	conflicts = mdp
+	options = !debug
+	source = git+https://github.com/kristyancarvalho/mdp.git#commit=26959f064b231f3d30afc2d7b81f32d788802374
+	sha256sums = SKIP
+
+pkgname = mdp-pager
