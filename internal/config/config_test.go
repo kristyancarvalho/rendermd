@@ -38,6 +38,9 @@ func TestDefaults(t *testing.T) {
 	if !cfg.Watch.Enabled {
 		t.Error("Watch.Enabled: want true")
 	}
+	if !cfg.UI.Mouse {
+		t.Error("UI.Mouse: want true")
+	}
 }
 
 func TestLoad_MissingFile(t *testing.T) {
@@ -194,13 +197,16 @@ func TestMerge_OmittedBoolsPreserveDefaults(t *testing.T) {
 func TestMerge_ExplicitFalseIsRespected(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.toml")
-	content := "[ui]\nsoft_wrap = false\n"
+	content := "[ui]\nsoft_wrap = false\nmouse = false\n"
 	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
 	cfg := Load(cfgPath)
 	if cfg.UI.SoftWrap {
 		t.Error("Explicit soft_wrap = false should be respected")
+	}
+	if cfg.UI.Mouse {
+		t.Error("Explicit mouse = false should be respected")
 	}
 }
 

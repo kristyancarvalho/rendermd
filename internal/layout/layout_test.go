@@ -125,6 +125,60 @@ func TestLayout_Paragraph_Wrapping(t *testing.T) {
 	}
 }
 
+func TestLayout_InlineFormatting_PunctuationSpacing(t *testing.T) {
+	p := &model.Paragraph{Spans: []model.Span{
+		&model.Strong{Children: []model.Span{&model.Text{Value: "bold"}}},
+		&model.Text{Value: ", "},
+		&model.Emphasis{Children: []model.Span{&model.Text{Value: "italic"}}},
+		&model.Text{Value: ", "},
+		&model.InlineCode{Value: "code"},
+		&model.Text{Value: ", "},
+		&model.Link{Label: []model.Span{&model.Text{Value: "link"}}, URL: "https://example.com"},
+		&model.Text{Value: "."},
+	}}
+	lines := Layout(doc(p), defaultCfg(80))
+	flat := flattenLines(lines)
+	want := "bold, italic, code, link."
+	if !strings.Contains(flat, want) {
+		t.Errorf("inline punctuation should remain attached: want %q in %q", want, flat)
+	}
+	if strings.Contains(flat, " ,") || strings.Contains(flat, " .") {
+		t.Errorf("inline punctuation should not have leading spaces, got %q", flat)
+	}
+}
+
+func TestLayout_InlineFormatting_SpanBoundarySpacing(t *testing.T) {
+	p := &model.Paragraph{Spans: []model.Span{
+		&model.Text{Value: "plain "},
+		&model.Strong{Children: []model.Span{&model.Text{Value: "bold"}}},
+		&model.Text{Value: " text"},
+	}}
+	lines := Layout(doc(p), defaultCfg(80))
+	flat := flattenLines(lines)
+	want := "plain bold text"
+	if !strings.Contains(flat, want) {
+		t.Errorf("inline whitespace should survive span boundaries: want %q in %q", want, flat)
+	}
+}
+
+func TestLayout_LinkSegmentsKeepURL(t *testing.T) {
+	p := &model.Paragraph{Spans: []model.Span{
+		&model.Link{Label: []model.Span{&model.Text{Value: "site"}}, URL: "https://example.com"},
+	}}
+	lines := Layout(doc(p), defaultCfg(80))
+	for _, l := range lines {
+		for _, seg := range l.Segments {
+			if seg.Style == StyleLink {
+				if seg.URL != "https://example.com" {
+					t.Errorf("link segment URL: want %q, got %q", "https://example.com", seg.URL)
+				}
+				return
+			}
+		}
+	}
+	t.Fatal("link segment not found")
+}
+
 func TestLayout_CodeBlock_ContainsCodeText(t *testing.T) {
 	lines := Layout(doc(code("go", "x := 1", "y := 2")), defaultCfg(80))
 	full := flattenLines(lines)
@@ -147,6 +201,32 @@ func TestLayout_CodeBlock_LinesPreserved(t *testing.T) {
 	}
 	if found != 2 {
 		t.Errorf("expected 2 reconstructed code lines, found %d", found)
+	}
+}
+
+func TestLayout_CodeBlock_PaddingUsesCodeStyle(t *testing.T) {
+	lines := Layout(doc(code("go", "x := 1")), defaultCfg(20))
+	var codeLine Line
+	for _, l := range lines {
+		if strings.Contains(flattenLine(l), "x := 1") {
+			codeLine = l
+			break
+		}
+	}
+	if len(codeLine.Segments) == 0 {
+		t.Fatal("code line not found")
+	}
+	if codeLine.Indent != 0 {
+		t.Errorf("code padding should be emitted as styled text, got indent %d", codeLine.Indent)
+	}
+	if segmentsWidth(codeLine.Segments) != 20 {
+		t.Errorf("code line should fill width 20, got %d", segmentsWidth(codeLine.Segments))
+	}
+	if codeLine.Segments[0].Style != StyleCodeBlock {
+		t.Errorf("leading code padding should use StyleCodeBlock, got %d", codeLine.Segments[0].Style)
+	}
+	if codeLine.Segments[len(codeLine.Segments)-1].Style != StyleCodeBlock {
+		t.Errorf("trailing code padding should use StyleCodeBlock, got %d", codeLine.Segments[len(codeLine.Segments)-1].Style)
 	}
 }
 
@@ -333,6 +413,29 @@ func TestLayout_UnorderedList_BulletPresent(t *testing.T) {
 	}
 }
 
+func TestLayout_List_MarkersDoNotUseLineIndent(t *testing.T) {
+	lst := &model.List{
+		Ordered: false,
+		Items: []model.ListItem{
+			{Blocks: []model.Block{para("item one")}},
+		},
+	}
+	lines := Layout(doc(lst), defaultCfg(80))
+	for _, l := range lines {
+		if !strings.Contains(flattenLine(l), "item one") {
+			continue
+		}
+		if l.Indent != 0 {
+			t.Errorf("list marker alignment should be in text segments, got indent %d", l.Indent)
+		}
+		if !strings.HasPrefix(flattenLine(l), "• item one") {
+			t.Errorf("list line should start with marker, got %q", flattenLine(l))
+		}
+		return
+	}
+	t.Fatal("list item line not found")
+}
+
 func TestLayout_OrderedList_NumbersPresent(t *testing.T) {
 	lst := &model.List{
 		Ordered: true,
@@ -414,6 +517,74 @@ func TestLayout_Quote_HasBarPrefix(t *testing.T) {
 	}
 	if !found {
 		t.Error("blockquote should render a vertical bar prefix (▎)")
+	}
+}
+
+func TestLayout_Quote_StylesCompleteLine(t *testing.T) {
+	q := &model.Quote{Blocks: []model.Block{para("quoted text")}}
+	lines := Layout(doc(q), defaultCfg(24))
+	found := false
+	for _, l := range lines {
+		if !strings.Contains(flattenLine(l), "quoted text") {
+			continue
+		}
+		found = true
+		if segmentsWidth(l.Segments) != 24 {
+			t.Errorf("quote line should fill width 24, got %d", segmentsWidth(l.Segments))
+		}
+		for _, seg := range l.Segments {
+			if seg.Style != StyleQuote {
+				t.Errorf("quote line segment should have StyleQuote, got %d", seg.Style)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("quote text line not found")
+	}
+}
+
+func TestLayout_Quote_WrappedLinesUseQuoteStyle(t *testing.T) {
+	q := &model.Quote{Blocks: []model.Block{para("one two three four five six seven")}}
+	lines := Layout(doc(q), defaultCfg(14))
+	styledWrapped := 0
+	for _, l := range lines {
+		if !strings.Contains(flattenLine(l), "▎") || isEmptyLine(l) {
+			continue
+		}
+		allQuote := true
+		for _, seg := range l.Segments {
+			if seg.Style != StyleQuote {
+				allQuote = false
+			}
+		}
+		if allQuote {
+			styledWrapped++
+		}
+	}
+	if styledWrapped < 2 {
+		t.Errorf("wrapped quote should produce multiple quote-styled lines, got %d", styledWrapped)
+	}
+}
+
+func TestLayout_Quote_NestedQuotesKeepMarkers(t *testing.T) {
+	q := &model.Quote{Blocks: []model.Block{
+		&model.Quote{Blocks: []model.Block{para("nested")}},
+	}}
+	lines := Layout(doc(q), defaultCfg(30))
+	found := false
+	for _, l := range lines {
+		flat := flattenLine(l)
+		if strings.Contains(flat, "▎ ▎") && strings.Contains(flat, "nested") {
+			found = true
+			for _, seg := range l.Segments {
+				if seg.Style != StyleQuote {
+					t.Errorf("nested quote segment should have StyleQuote, got %d", seg.Style)
+				}
+			}
+		}
+	}
+	if !found {
+		t.Error("nested quote should retain both quote markers")
 	}
 }
 

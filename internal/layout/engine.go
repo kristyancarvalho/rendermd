@@ -42,6 +42,7 @@ const (
 type Segment struct {
 	Text  string
 	Style StyleID
+	URL   string
 }
 
 type Line struct {
@@ -172,7 +173,7 @@ func kindToStyle(k syntax.TokenKind) StyleID {
 	}
 }
 
-func renderCodeBlock(c *model.CodeBlock, _ int, cfg LayoutConfig) []Line {
+func renderCodeBlock(c *model.CodeBlock, width int, cfg LayoutConfig) []Line {
 	var lines []Line
 	lines = append(lines, emptyLine())
 
@@ -184,21 +185,18 @@ func renderCodeBlock(c *model.CodeBlock, _ int, cfg LayoutConfig) []Line {
 
 	for _, l := range c.Lines {
 		tokens := syntax.Tokenize(c.Lang, l)
-		segs := make([]Segment, 0, len(tokens))
-		for i, tok := range tokens {
-			text := tok.Text
-			if i == 0 {
-				text = " " + text
-			}
+		segs := []Segment{{Text: " ", Style: StyleCodeBlock}}
+		for _, tok := range tokens {
 			segs = append(segs, Segment{
-				Text:  text,
+				Text:  tok.Text,
 				Style: kindToStyle(tok.Kind),
 			})
 		}
-		if len(segs) == 0 {
-			segs = []Segment{{Text: " ", Style: StyleCodeBlock}}
+		used := segmentsWidth(segs)
+		if used < width {
+			segs = append(segs, Segment{Text: strings.Repeat(" ", width-used), Style: StyleCodeBlock})
 		}
-		lines = append(lines, Line{Segments: segs, Indent: 1})
+		lines = append(lines, Line{Segments: segs})
 	}
 
 	lines = append(lines, emptyLine())
@@ -214,17 +212,34 @@ func renderQuote(q *model.Quote, width int, cfg LayoutConfig) []Line {
 	}
 	for _, b := range q.Blocks {
 		for _, l := range renderBlock(b, inner, cfg) {
-			if len(l.Segments) == 0 {
-				lines = append(lines, Line{Segments: []Segment{{Text: "\u258e ", Style: StyleQuote}}})
-				continue
-			}
-			prefixed := Line{Indent: l.Indent}
-			prefixed.Segments = append([]Segment{{Text: "\u258e ", Style: StyleQuote}}, l.Segments...)
-			lines = append(lines, prefixed)
+			lines = append(lines, quoteLine(l, width))
 		}
 	}
 	lines = append(lines, emptyLine())
 	return lines
+}
+
+func quoteLine(line Line, width int) Line {
+	segs := []Segment{{Text: "\u258e ", Style: StyleQuote}}
+	if line.Indent > 0 {
+		segs = append(segs, Segment{Text: strings.Repeat(" ", line.Indent), Style: StyleQuote})
+	}
+	for _, seg := range line.Segments {
+		segs = append(segs, Segment{Text: seg.Text, Style: StyleQuote, URL: seg.URL})
+	}
+	used := segmentsWidth(segs)
+	if used < width {
+		segs = append(segs, Segment{Text: strings.Repeat(" ", width-used), Style: StyleQuote})
+	}
+	return Line{Segments: segs}
+}
+
+func segmentsWidth(segs []Segment) int {
+	width := 0
+	for _, seg := range segs {
+		width += runewidth.StringWidth(seg.Text)
+	}
+	return width
 }
 
 func renderList(lst *model.List, width int, cfg LayoutConfig) []Line {
@@ -255,13 +270,13 @@ func renderList(lst *model.List, width int, cfg LayoutConfig) []Line {
 					continue
 				}
 				if first {
-					nl := Line{Indent: l.Indent + markerWidth}
-					nl.Segments = append([]Segment{{Text: marker, Style: StyleNormal}}, l.Segments...)
+					nl := Line{}
+					nl.Segments = append([]Segment{{Text: marker + strings.Repeat(" ", l.Indent), Style: StyleNormal}}, l.Segments...)
 					lines = append(lines, nl)
 					first = false
 				} else {
-					nl := Line{Indent: l.Indent + markerWidth}
-					nl.Segments = append([]Segment{{Text: strings.Repeat(" ", markerWidth), Style: StyleNormal}}, l.Segments...)
+					nl := Line{}
+					nl.Segments = append([]Segment{{Text: strings.Repeat(" ", markerWidth+l.Indent), Style: StyleNormal}}, l.Segments...)
 					lines = append(lines, nl)
 				}
 			}
@@ -462,36 +477,39 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 	type chunk struct {
 		text  string
 		style StyleID
+		url   string
 	}
 	var chunks []chunk
 	for _, s := range spans {
 		switch v := s.(type) {
 		case *model.Text:
-			chunks = append(chunks, chunk{v.Value, StyleNormal})
+			chunks = append(chunks, chunk{text: v.Value, style: StyleNormal})
 		case *model.Emphasis:
-			chunks = append(chunks, chunk{spansText(v.Children), StyleEmphasis})
+			chunks = append(chunks, chunk{text: spansText(v.Children), style: StyleEmphasis})
 		case *model.Strong:
-			chunks = append(chunks, chunk{spansText(v.Children), StyleStrong})
+			chunks = append(chunks, chunk{text: spansText(v.Children), style: StyleStrong})
 		case *model.InlineCode:
-			chunks = append(chunks, chunk{v.Value, StyleInlineCode})
+			chunks = append(chunks, chunk{text: v.Value, style: StyleInlineCode})
 		case *model.Link:
-			chunks = append(chunks, chunk{spansText(v.Label), StyleLink})
+			chunks = append(chunks, chunk{text: spansText(v.Label), style: StyleLink, url: v.URL})
 			if cfg.ShowURLs && v.URL != spansText(v.Label) {
-				chunks = append(chunks, chunk{" (" + v.URL + ")", StyleLinkURL})
+				chunks = append(chunks, chunk{text: " (" + v.URL + ")", style: StyleLinkURL, url: v.URL})
 			}
 		case *model.HardBreak:
-			chunks = append(chunks, chunk{"\n", StyleNormal})
+			chunks = append(chunks, chunk{text: "\n", style: StyleNormal})
 		}
 	}
 
 	var lines []Line
 	var curLine []Segment
 	curWidth := 0
+	pendingSpace := false
 
 	flushLine := func() {
 		lines = append(lines, Line{Segments: curLine})
 		curLine = nil
 		curWidth = 0
+		pendingSpace = false
 	}
 
 	for _, ch := range chunks {
@@ -499,11 +517,10 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 			flushLine()
 			continue
 		}
-		words := strings.Fields(ch.text)
-		leadingSpace := len(ch.text) > 0 && ch.text[0] == ' '
+		words, spaces, trailingSpace := inlineTokens(ch.text)
 		for wi, word := range words {
 			spaceNeeded := 0
-			if (curWidth > 0 || (wi == 0 && leadingSpace)) && wi >= 0 {
+			if (pendingSpace || spaces[wi]) && curWidth > 0 {
 				spaceNeeded = 1
 			}
 			wl := runewidth.StringWidth(word)
@@ -515,8 +532,12 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 			if spaceNeeded > 0 && curWidth > 0 {
 				text = " " + word
 			}
-			curLine = append(curLine, Segment{Text: text, Style: ch.style})
+			curLine = append(curLine, Segment{Text: text, Style: ch.style, URL: ch.url})
 			curWidth += runewidth.StringWidth(text)
+			pendingSpace = false
+		}
+		if trailingSpace {
+			pendingSpace = true
 		}
 	}
 	if len(curLine) > 0 {
@@ -526,6 +547,31 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 		lines = append(lines, Line{Segments: []Segment{{Text: "", Style: StyleNormal}}})
 	}
 	return lines
+}
+
+func inlineTokens(text string) ([]string, []bool, bool) {
+	var words []string
+	var spaces []bool
+	var cur strings.Builder
+	pendingSpace := false
+	for _, r := range text {
+		if r == ' ' || r == '\t' || r == '\n' || r == '\r' {
+			if cur.Len() > 0 {
+				words = append(words, cur.String())
+				spaces = append(spaces, pendingSpace)
+				cur.Reset()
+			}
+			pendingSpace = true
+			continue
+		}
+		cur.WriteRune(r)
+	}
+	if cur.Len() > 0 {
+		words = append(words, cur.String())
+		spaces = append(spaces, pendingSpace)
+		pendingSpace = false
+	}
+	return words, spaces, pendingSpace
 }
 
 func padLeft(s string, n int) string {

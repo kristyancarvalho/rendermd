@@ -107,6 +107,7 @@ soft_wrap         = true
 max_width         = 96
 show_line_numbers = false
 show_urls         = false
+mouse             = true
 
 [theme]
 name       = "default"
@@ -150,6 +151,14 @@ debounce_ms = 150
 ```
 
 Theme colors accept hex colors or ANSI 256-color values. Invalid theme names fall back to `default`; invalid color overrides are ignored with a warning.
+
+## Rendering Styles
+
+Headings use the configured heading color and keep their text aligned to the document content width. Blockquotes use the quote foreground and background across the full rendered quote line, including wrapped lines and nested quote markers. Code blocks use the code background for both code text and horizontal padding, with language labels shown when syntax display is enabled. Lists keep markers and continuation text aligned within layout segments. Thematic breaks use the border color and span the available content width.
+
+## Search
+
+Search uses an index built from rendered lines and refreshed after layout changes, manual reloads, and watched file updates. The index stores one lowercased string per rendered line, trading a small amount of memory for faster repeated searches in large documents.
 
 ## Development
 
