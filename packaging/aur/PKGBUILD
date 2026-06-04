@@ -1,0 +1,40 @@
+pkgname=mdp-pager
+pkgver=1.1.0
+pkgrel=1
+pkgdesc='Terminal Markdown pager with syntax-aware rendering, hot reload, and fuzzy search'
+arch=('x86_64' 'aarch64')
+url='https://github.com/kristyancarvalho/mdp'
+license=('MIT')
+depends=('glibc')
+makedepends=('go')
+conflicts=('mdp')
+options=('!debug')
+_upstream='mdp'
+_commit='26959f064b231f3d30afc2d7b81f32d788802374'
+source=("git+${url}.git#commit=${_commit}")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "${_upstream}"
+  go mod download
+}
+
+build() {
+  cd "${_upstream}"
+  local build_date
+  build_date="$(date -u -d "@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%dT%H:%M:%SZ)"
+  go build -buildmode=pie -trimpath -mod=readonly -modcacherw -buildvcs=false -ldflags "-linkmode=external -X main.version=v${pkgver} -X main.commit=${_commit:0:12} -X main.date=${build_date}" -o mdp ./cmd/mdp
+}
+
+check() {
+  cd "${_upstream}"
+  go test ./...
+}
+
+package() {
+  cd "${_upstream}"
+  install -Dm755 mdp "${pkgdir}/usr/bin/mdp"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+  install -Dm644 config.example.toml "${pkgdir}/usr/share/doc/${pkgname}/config.example.toml"
+}

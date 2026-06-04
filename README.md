@@ -1,15 +1,81 @@
-# mdp — Markdown Pager
+# mdp
 
-Terminal pager for Markdown files with syntax-aware rendering, hot reload, and fuzzy search.
+`mdp` is a terminal Markdown pager with syntax-aware rendering, hot reload, fuzzy search, and configurable themes.
 
 ## Features
 
-- Renders headings, bold, italic, inline code, fenced code blocks, blockquotes, lists, task lists, tables, and thematic breaks
-- Hot-reload on file save (`--watch`)
-- `/` search with `n`/`N` navigation
-- Configurable themes (`default` dark, `light`)
-- TOML config file at `~/.config/mdp/config.toml`
-- Reads from file or stdin
+- Markdown rendering for headings, emphasis, inline code, fenced code blocks, blockquotes, lists, task lists, tables, and thematic breaks
+- Hot reload on file save with debounced watcher events
+- Search with next and previous result navigation
+- Built-in `default` and `light` themes
+- TOML configuration at `~/.config/mdp/config.toml`
+- File and stdin input
+- Build-time version, commit, and date metadata
+
+## Installation
+
+### From Source
+
+Requirements:
+
+- Go 1.26 or newer
+- Git
+
+```sh
+git clone https://github.com/kristyancarvalho/mdp.git
+cd mdp
+make build
+install -Dm755 bin/mdp ~/.local/bin/mdp
+```
+
+### With `go install`
+
+```sh
+go install github.com/kristyancarvalho/mdp/cmd/mdp@latest
+```
+
+This installs the binary into `$GOBIN`, or `$GOPATH/bin` when `GOBIN` is not set.
+
+### Arch Linux
+
+Arch users can build the AUR package metadata from `packaging/aur`.
+
+```sh
+cd packaging/aur
+makepkg -si
+```
+
+After the package is submitted to AUR:
+
+```sh
+paru -S mdp-pager
+```
+
+The AUR package name is `mdp-pager` because Arch already ships a different package named `mdp`. The package installs this project as `/usr/bin/mdp` and conflicts with Arch's `mdp` package.
+
+## Usage
+
+```sh
+mdp README.md
+mdp --watch README.md
+mdp -w README.md
+mdp --theme light README.md
+mdp --config ~/.config/mdp/config.toml README.md
+cat README.md | mdp
+mdp --version
+```
+
+`--version` prints the application version, commit hash, and build date. Builds created with `make build`, `make install`, or the release workflow inject those values with linker flags.
+
+## Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--watch` | `-w` | Reload the file after debounced filesystem changes |
+| `--config <path>` | `-c <path>` | Load a TOML configuration file |
+| `--theme <name>` | `-t <name>` | Select a built-in theme and override the config theme |
+| `--version` | | Print version metadata and exit |
+| `--help` | | Print CLI help |
 
 ## Keybindings
 
@@ -17,99 +83,48 @@ Terminal pager for Markdown files with syntax-aware rendering, hot reload, and f
 |-----|--------|
 | `j` / `k` | Scroll down / up |
 | `Ctrl+d` / `Ctrl+u` | Half page down / up |
-| `gg` | Top |
-| `G` | Bottom |
+| `gg` | Go to top |
+| `G` | Go to bottom |
 | `/` | Enter search |
-| `n` / `N` | Next / prev result |
+| `n` / `N` | Next / previous result |
 | `r` | Reload file |
-| `?` | Help overlay |
+| `?` | Toggle help |
 | `q` | Quit |
-
-## Usage
-
-```sh
-# View a file
-mdp README.md
-
-# Hot-reload on save
-mdp --watch README.md
-mdp -w README.md
-
-# Light theme
-mdp --theme light README.md
-
-# Custom config
-mdp --config ~/.config/mdp/config.toml README.md
-
-# Pipe from stdin
-cat README.md | mdp
-
-# Show version
-mdp --version
-```
-
-## Build & Run
-
-### Prerequisites
-
-- Go 1.22+
-- Internet access (for `go mod download`) OR pre-downloaded modules
-
-### Quick Start
-
-```sh
-# Clone or unzip the project
-cd mdp
-
-# Download dependencies and build
-go mod tidy
-go build -o mdp ./cmd/mdp
-
-# Run
-./mdp README.md
-```
-
-### Install globally
-
-```sh
-go install ./cmd/mdp
-# Binary goes to $GOPATH/bin/mdp or $HOME/go/bin/mdp
-```
-
-### Module path
-
-The default module path is `github.com/kristyancarvalho/mdp`. Before publishing,
-replace it with your actual GitHub username:
-
-```sh
-# macOS/Linux
-find . -type f -name "*.go" | xargs sed -i 's|github.com/kristyancarvalho/mdp|github.com/YOU/mdp|g'
-sed -i 's|github.com/kristyancarvalho/mdp|github.com/YOU/mdp|g' go.mod
-```
 
 ## Configuration
 
-Create `~/.config/mdp/config.toml`:
+Create `~/.config/mdp/config.toml` or copy `config.example.toml`.
 
 ```toml
 [ui]
-padding = 2
-max_width = 96
-soft_wrap = true
+padding           = 2
+line_spacing      = 0
+scrolloff         = 4
+soft_wrap         = true
+max_width         = 96
 show_line_numbers = false
-show_urls = false
+show_urls         = false
 
 [theme]
-name = "default"   # "default" | "light"
-
-# Override individual colours (hex or ANSI 256):
-# heading  = "#89b4fa"
-# text     = "#cdd6f4"
-# code_bg  = "#313244"
+name       = "default"
+background = ""
+text       = ""
+muted      = ""
+heading    = ""
+accent     = ""
+link       = ""
+link_url   = ""
+code_bg    = ""
+quote_bg   = ""
+border     = ""
 
 [markdown]
-hide_syntax      = true
-render_tables    = true
+hide_syntax       = true
+render_emphasis   = true
+render_strong     = true
+render_links      = true
+render_images     = false
+render_tables     = true
 render_task_lists = true
 
 [keys]
@@ -131,46 +146,30 @@ enabled     = true
 debounce_ms = 150
 ```
 
-## Project Structure
+Theme colors accept hex colors or ANSI 256-color values. Invalid theme names fall back to `default`; invalid color overrides are ignored with a warning.
 
-```
-mdp/
-├── cmd/mdp/main.go              # Entry point
-├── internal/
-│   ├── app/app.go               # CLI flags, wiring
-│   ├── config/
-│   │   ├── config.go            # TOML loader & merge
-│   │   └── defaults.go          # Default values
-│   ├── input/
-│   │   ├── keymap.go            # Key→Action resolver
-│   │   └── state.go             # UI state enum
-│   ├── layout/
-│   │   └── engine.go            # Markdown→[]Line layout engine
-│   ├── markdown/
-│   │   ├── parser.go            # goldmark entry point
-│   │   └── normalize.go         # AST→model converter
-│   ├── model/
-│   │   ├── block.go             # Block node types
-│   │   └── span.go              # Inline span types
-│   ├── render/
-│   │   └── renderer.go          # lipgloss renderer + viewport
-│   ├── theme/
-│   │   ├── theme.go             # Theme struct
-│   │   └── builtin.go           # default / light palettes
-│   ├── ui/
-│   │   └── ui.go                # Bubbletea model (Update/View)
-│   └── watch/
-│       └── watcher.go           # fsnotify debounced watcher
-├── go.mod
-└── README.md
+## Development
+
+```sh
+go test ./...
+make build
+./bin/mdp --version
 ```
 
-## Dependencies
+The main packages are:
 
-| Package | Purpose |
-|---------|---------|
-| `github.com/charmbracelet/bubbletea` | TUI framework |
-| `github.com/charmbracelet/lipgloss` | Terminal styling |
-| `github.com/yuin/goldmark` | Markdown parser (CommonMark + GFM) |
-| `github.com/fsnotify/fsnotify` | File-system watcher |
-| `github.com/BurntSushi/toml` | Config file parser |
+| Path | Purpose |
+|------|---------|
+| `cmd/mdp` | CLI entrypoint |
+| `internal/app` | Flag parsing and runtime wiring |
+| `internal/config` | Defaults, TOML loading, validation, and merge logic |
+| `internal/markdown` | Markdown parsing and normalization |
+| `internal/layout` | Markdown block layout |
+| `internal/render` | Terminal rendering |
+| `internal/theme` | Built-in themes and validation |
+| `internal/ui` | Bubble Tea model |
+| `internal/watch` | File watcher with debounced events |
+
+## Releases
+
+Releases are created from `v*` tags by the GitHub Actions workflow in `.github/workflows/release.yml`. See `docs/release.md` for the release checklist and artifact details.

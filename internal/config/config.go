@@ -84,6 +84,13 @@ func (c *Config) ResolvedTheme() theme.Theme {
 	return c.resolved
 }
 
+func (c *Config) SetThemeName(name string) []theme.ValidationWarning {
+	c.Theme.Name = name
+	warnings := validateThemeConfig(&c.Theme)
+	c.resolved = resolveTheme(c.Theme)
+	return warnings
+}
+
 func DefaultPath() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
