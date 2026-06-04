@@ -12,7 +12,24 @@ import (
 	"github.com/kristyancarvalho/mdp/internal/watch"
 )
 
-func Run(version string, args []string) error {
+type BuildInfo struct {
+	Version string
+	Commit  string
+	Date    string
+}
+
+func (b BuildInfo) Print(w io.Writer) {
+	fmt.Fprintf(w, "mdp %s\ncommit %s\nbuilt %s\n", valueOrDefault(b.Version, "dev"), valueOrDefault(b.Commit, "unknown"), valueOrDefault(b.Date, "unknown"))
+}
+
+func valueOrDefault(value, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func Run(build BuildInfo, args []string) error {
 	fs := flag.NewFlagSet("mdp", flag.ContinueOnError)
 	var (
 		watchFlag   = fs.Bool("watch", false, "enable hot reload on file change")
@@ -32,7 +49,7 @@ func Run(version string, args []string) error {
 	}
 
 	if *versionFlag {
-		fmt.Println("mdp", version)
+		build.Print(os.Stdout)
 		return nil
 	}
 
