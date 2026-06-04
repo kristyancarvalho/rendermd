@@ -1,0 +1,54 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - run: go test ./...
+
+      - shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          version="${GITHUB_REF_NAME}"
+          commit="$(git rev-parse --short HEAD)"
+          date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            os="${target%/*}"
+            arch="${target#*/}"
+            ext=""
+            if [ "$os" = "windows" ]; then
+              ext=".exe"
+            fi
+            binary="mdp-${version}-${os}-${arch}${ext}"
+            GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${version} -X main.commit=${commit} -X main.date=${date}" -o "dist/${binary}" ./cmd/mdp
+            tar -czf "dist/mdp-${version}-${os}-${arch}.tar.gz" -C dist "${binary}" -C .. README.md LICENSE config.example.toml
+            rm "dist/${binary}"
+          done
+
+      - shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum * > checksums.txt
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --generate-notes
