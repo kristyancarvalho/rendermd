@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kristyancarvalho/mdp/internal/model"
+	"github.com/kristyancarvalho/rendermd/internal/model"
 )
 
 func doc(blocks ...model.Block) model.Document {

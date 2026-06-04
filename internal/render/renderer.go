@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kristyancarvalho/mdp/internal/layout"
-	"github.com/kristyancarvalho/mdp/internal/theme"
+	"github.com/kristyancarvalho/rendermd/internal/layout"
+	"github.com/kristyancarvalho/rendermd/internal/theme"
 )
 
 type Viewport struct {

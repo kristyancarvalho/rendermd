@@ -75,8 +75,8 @@ body:
       label: Environment
       description: Share relevant environment details.
       placeholder: |
-        OS: 
-        Terminal: 
-        mdp version: 
-        Go version: 
-        Config: 
+        OS:
+        Terminal:
+        rendermd version:
+        Go version:
+        Config:

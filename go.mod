@@ -1,4 +1,4 @@
-module github.com/kristyancarvalho/mdp
+module github.com/kristyancarvalho/rendermd
 
 go 1.26
 

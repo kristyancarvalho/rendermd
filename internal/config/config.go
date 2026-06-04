@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
-	"github.com/kristyancarvalho/mdp/internal/theme"
+	"github.com/kristyancarvalho/rendermd/internal/theme"
 )
 
 type Config struct {
@@ -96,7 +96,7 @@ func DefaultPath() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(home, ".config", "mdp", "config.toml")
+	return filepath.Join(home, ".config", "rendermd", "config.toml")
 }
 
 func Load(path string) Config {
@@ -110,7 +110,7 @@ func Load(path string) Config {
 	var overlay Config
 	meta, err2 := toml.Decode(string(data), &overlay)
 	if err2 != nil {
-		fmt.Fprintf(os.Stderr, "mdp: config parse error: %v\n", err2)
+		fmt.Fprintf(os.Stderr, "rendermd: config parse error: %v\n", err2)
 		return cfg
 	}
 

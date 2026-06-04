@@ -105,7 +105,7 @@ func TestGo_Keyword(t *testing.T) {
 	if !containsKind(tok, KindKeyword) {
 		t.Error("expected KindKeyword token for 'func'")
 	}
-	
+
 	for _, tk := range tok {
 		if tk.Text == "func" && tk.Kind != KindKeyword {
 			t.Errorf("'func' should be KindKeyword, got %v", tk.Kind)

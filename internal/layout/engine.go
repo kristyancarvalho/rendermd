@@ -5,8 +5,8 @@ import (
 	"hash/fnv"
 	"strings"
 
-	"github.com/kristyancarvalho/mdp/internal/model"
-	"github.com/kristyancarvalho/mdp/internal/syntax"
+	"github.com/kristyancarvalho/rendermd/internal/model"
+	"github.com/kristyancarvalho/rendermd/internal/syntax"
 	"github.com/mattn/go-runewidth"
 )
 

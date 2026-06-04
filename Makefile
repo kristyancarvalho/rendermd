@@ -6,7 +6,7 @@ LDFLAGS ?= -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.dat
 .PHONY: build test lint install clean
 
 build:
-	go build -ldflags="$(LDFLAGS)" -o bin/mdp ./cmd/mdp
+	go build -ldflags="$(LDFLAGS)" -o bin/rendermd ./cmd/rendermd
 
 test:
 	go test ./...
@@ -15,7 +15,7 @@ lint:
 	golangci-lint run
 
 install:
-	go install -ldflags="$(LDFLAGS)" ./cmd/mdp
+	go install -ldflags="$(LDFLAGS)" ./cmd/rendermd
 
 clean:
 	rm -rf bin/

@@ -13,7 +13,7 @@ type ValidationWarning struct {
 }
 
 func (w ValidationWarning) String() string {
-	return fmt.Sprintf("mdp: config warning: %s: invalid value %q — %s", w.Field, w.Value, w.Message)
+	return fmt.Sprintf("rendermd: config warning: %s: invalid value %q — %s", w.Field, w.Value, w.Message)
 }
 
 func isValidColor(s string) bool {

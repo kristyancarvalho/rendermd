@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/kristyancarvalho/mdp/internal/config"
-	"github.com/kristyancarvalho/mdp/internal/ui"
-	"github.com/kristyancarvalho/mdp/internal/watch"
+	"github.com/kristyancarvalho/rendermd/internal/config"
+	"github.com/kristyancarvalho/rendermd/internal/ui"
+	"github.com/kristyancarvalho/rendermd/internal/watch"
 )
 
 type BuildInfo struct {
@@ -19,7 +19,7 @@ type BuildInfo struct {
 }
 
 func (b BuildInfo) Print(w io.Writer) {
-	fmt.Fprintf(w, "mdp %s\ncommit %s\nbuilt %s\n", valueOrDefault(b.Version, "dev"), valueOrDefault(b.Commit, "unknown"), valueOrDefault(b.Date, "unknown"))
+	fmt.Fprintf(w, "rendermd %s\ncommit %s\nbuilt %s\n", valueOrDefault(b.Version, "dev"), valueOrDefault(b.Commit, "unknown"), valueOrDefault(b.Date, "unknown"))
 }
 
 func valueOrDefault(value, fallback string) string {
@@ -30,7 +30,7 @@ func valueOrDefault(value, fallback string) string {
 }
 
 func Run(build BuildInfo, args []string) error {
-	fs := flag.NewFlagSet("mdp", flag.ContinueOnError)
+	fs := flag.NewFlagSet("rendermd", flag.ContinueOnError)
 	var (
 		watchFlag   = fs.Bool("watch", false, "enable hot reload on file change")
 		configFlag  = fs.String("config", config.DefaultPath(), "path to config file")
@@ -82,7 +82,7 @@ func Run(build BuildInfo, args []string) error {
 			}
 			*watchFlag = false
 		} else {
-			fmt.Fprintf(os.Stderr, "usage: mdp [--watch] [--config <path>] [--theme <name>] <file>\n")
+			fmt.Fprintf(os.Stderr, "usage: rendermd [--watch] [--config <path>] [--theme <name>] <file>\n")
 			os.Exit(1)
 		}
 	}

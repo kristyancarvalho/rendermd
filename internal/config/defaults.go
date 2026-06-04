@@ -1,6 +1,6 @@
 package config
 
-import "github.com/kristyancarvalho/mdp/internal/theme"
+import "github.com/kristyancarvalho/rendermd/internal/theme"
 
 func defaults() Config {
 	return Config{

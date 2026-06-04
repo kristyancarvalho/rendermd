@@ -8,14 +8,14 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kristyancarvalho/mdp/internal/config"
-	"github.com/kristyancarvalho/mdp/internal/input"
-	"github.com/kristyancarvalho/mdp/internal/layout"
-	"github.com/kristyancarvalho/mdp/internal/markdown"
-	"github.com/kristyancarvalho/mdp/internal/model"
-	"github.com/kristyancarvalho/mdp/internal/render"
-	"github.com/kristyancarvalho/mdp/internal/theme"
-	"github.com/kristyancarvalho/mdp/internal/watch"
+	"github.com/kristyancarvalho/rendermd/internal/config"
+	"github.com/kristyancarvalho/rendermd/internal/input"
+	"github.com/kristyancarvalho/rendermd/internal/layout"
+	"github.com/kristyancarvalho/rendermd/internal/markdown"
+	"github.com/kristyancarvalho/rendermd/internal/model"
+	"github.com/kristyancarvalho/rendermd/internal/render"
+	"github.com/kristyancarvalho/rendermd/internal/theme"
+	"github.com/kristyancarvalho/rendermd/internal/watch"
 )
 
 type watchMsg struct{}
