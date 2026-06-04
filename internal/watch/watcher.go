@@ -42,9 +42,16 @@ func (w *Watcher) Close() error {
 }
 
 func (w *Watcher) loop(debounce time.Duration) {
-	var timer *time.Timer
 	var deletedAt time.Time
 	deleted := false
+	var timerC <-chan time.Time
+	timer := time.NewTimer(time.Hour)
+	if !timer.Stop() {
+		<-timer.C
+	}
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	defer timer.Stop()
 
 	fire := func() {
 		select {
@@ -61,10 +68,28 @@ func (w *Watcher) loop(debounce time.Duration) {
 		}
 	}
 
+	resetTimer := func() {
+		if debounce <= 0 {
+			fire()
+			return
+		}
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+		timer.Reset(debounce)
+		timerC = timer.C
+	}
+
 	for {
 		select {
 		case <-w.done:
 			return
+		case <-timerC:
+			timerC = nil
+			fire()
 		case ev, ok := <-w.fw.Events:
 			if !ok {
 				return
@@ -80,16 +105,13 @@ func (w *Watcher) loop(debounce time.Duration) {
 					deleted = false
 				}
 			}
-			if timer != nil {
-				timer.Stop()
-			}
-			timer = time.AfterFunc(debounce, fire)
+			resetTimer()
 		case err, ok := <-w.fw.Errors:
 			if !ok {
 				return
 			}
 			sendErr(err)
-		case <-time.After(100 * time.Millisecond):
+		case <-ticker.C:
 			if deleted && time.Since(deletedAt) > 2*time.Second {
 				deleted = false
 				sendErr(fmt.Errorf("file removed: %s", w.path))
