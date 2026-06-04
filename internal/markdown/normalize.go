@@ -3,7 +3,7 @@ package markdown
 import (
 	"bytes"
 
-	"github.com/kristyancarvalho/mdp/internal/model"
+	"github.com/kristyancarvalho/rendermd/internal/model"
 	"github.com/yuin/goldmark/ast"
 	extast "github.com/yuin/goldmark/extension/ast"
 )

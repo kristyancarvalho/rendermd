@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kristyancarvalho/mdp/internal/app"
+	"github.com/kristyancarvalho/rendermd/internal/app"
 )
 
 var (
@@ -20,7 +20,7 @@ func main() {
 		Date:    date,
 	}
 	if err := app.Run(build, os.Args[1:]); err != nil {
-		fmt.Fprintf(os.Stderr, "mdp: %v\n", err)
+		fmt.Fprintf(os.Stderr, "rendermd: %v\n", err)
 		os.Exit(1)
 	}
 }

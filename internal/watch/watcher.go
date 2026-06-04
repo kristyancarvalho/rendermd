@@ -64,7 +64,7 @@ func (w *Watcher) loop(debounce time.Duration) {
 		select {
 		case w.Errors <- err:
 		default:
-			fmt.Fprintln(os.Stderr, "mdp: watch error:", err)
+			fmt.Fprintln(os.Stderr, "rendermd: watch error:", err)
 		}
 	}
 

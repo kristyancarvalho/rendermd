@@ -3,7 +3,7 @@ package markdown
 import (
 	"testing"
 
-	"github.com/kristyancarvalho/mdp/internal/model"
+	"github.com/kristyancarvalho/rendermd/internal/model"
 )
 
 func mustParse(t *testing.T, src string) model.Document {

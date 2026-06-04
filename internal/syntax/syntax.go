@@ -5,7 +5,7 @@ import "strings"
 type TokenKind int
 
 const (
-	KindPlain    TokenKind = iota 
+	KindPlain TokenKind = iota
 	KindKeyword
 	KindString
 	KindComment
@@ -76,7 +76,7 @@ func (s *scanner) emit(start int, kind TokenKind) {
 	if text == "" {
 		return
 	}
-	
+
 	if len(s.out) > 0 && s.out[len(s.out)-1].Kind == kind {
 		s.out[len(s.out)-1].Text += text
 		return
@@ -87,8 +87,8 @@ func (s *scanner) emit(start int, kind TokenKind) {
 func isLetter(b byte) bool {
 	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == '_'
 }
-func isDigit(b byte) bool  { return b >= '0' && b <= '9' }
-func isAlNum(b byte) bool  { return isLetter(b) || isDigit(b) }
+func isDigit(b byte) bool { return b >= '0' && b <= '9' }
+func isAlNum(b byte) bool { return isLetter(b) || isDigit(b) }
 func isHexDigit(b byte) bool {
 	return isDigit(b) || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')
 }
@@ -157,10 +157,12 @@ func tokenizeGo(src string) []Token {
 		}
 
 		if b == '/' && s.peekAt(1) == '*' {
-			s.advance(); s.advance()
+			s.advance()
+			s.advance()
 			for !s.done() {
 				if s.peek() == '*' && s.peekAt(1) == '/' {
-					s.advance(); s.advance()
+					s.advance()
+					s.advance()
 					break
 				}
 				s.advance()
@@ -256,11 +258,15 @@ func tokenizePython(src string) []Token {
 		}
 
 		if (b == '"' || b == '\'') && s.peekAt(1) == b && s.peekAt(2) == b {
-			s.advance(); s.advance(); s.advance()
+			s.advance()
+			s.advance()
+			s.advance()
 			q := b
 			for !s.done() {
 				if s.peek() == q && s.peekAt(1) == q && s.peekAt(2) == q {
-					s.advance(); s.advance(); s.advance()
+					s.advance()
+					s.advance()
+					s.advance()
 					break
 				}
 				s.advance()
@@ -345,12 +351,14 @@ func tokenizeJS(src string) []Token {
 			s.emit(start, KindComment)
 			continue
 		}
-		
+
 		if b == '/' && s.peekAt(1) == '*' {
-			s.advance(); s.advance()
+			s.advance()
+			s.advance()
 			for !s.done() {
 				if s.peek() == '*' && s.peekAt(1) == '/' {
-					s.advance(); s.advance()
+					s.advance()
+					s.advance()
 					break
 				}
 				s.advance()
@@ -542,12 +550,14 @@ func tokenizeRust(src string) []Token {
 			s.emit(start, KindComment)
 			continue
 		}
-		
+
 		if b == '/' && s.peekAt(1) == '*' {
-			s.advance(); s.advance()
+			s.advance()
+			s.advance()
 			for !s.done() {
 				if s.peek() == '*' && s.peekAt(1) == '/' {
-					s.advance(); s.advance()
+					s.advance()
+					s.advance()
 					break
 				}
 				s.advance()
@@ -562,7 +572,7 @@ func tokenizeRust(src string) []Token {
 			s.emit(start, KindString)
 			continue
 		}
-		
+
 		if b == '\'' {
 			s.advance()
 			s.consumeString('\'')
@@ -581,7 +591,7 @@ func tokenizeRust(src string) []Token {
 			for !s.done() && isAlNum(s.peek()) {
 				s.advance()
 			}
-			
+
 			if !s.done() && s.peek() == '!' {
 				s.advance()
 			}

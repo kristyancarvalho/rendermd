@@ -1,6 +1,6 @@
 # Release Process
 
-`mdp` publishes GitHub Releases from version tags.
+`rendermd` publishes GitHub Releases from version tags.
 
 ## Requirements
 
@@ -14,7 +14,7 @@
 1. Update release notes or documentation as needed.
 2. Run `go test ./...`.
 3. Run `make build`.
-4. Confirm `./bin/mdp --version` prints the expected version metadata.
+4. Confirm `./bin/rendermd --version` prints the expected version metadata.
 5. Create and push a version tag:
 
 ```sh
@@ -23,3 +23,5 @@ git push origin v1.1.0
 ```
 
 The `release` workflow runs on `v*` tags. It tests the project, builds Linux, macOS, and Windows artifacts, generates `checksums.txt`, and publishes the files to a GitHub Release.
+
+After publishing a release, update `packaging/aur/PKGBUILD` and `packaging/aur/.SRCINFO` if the AUR package needs a version bump.

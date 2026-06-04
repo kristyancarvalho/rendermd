@@ -1,15 +1,23 @@
-# mdp
+# rendermd
 
-`mdp` is a terminal Markdown pager with syntax-aware rendering, hot reload, fuzzy search, and configurable themes.
+[![Release workflow](https://github.com/kristyancarvalho/rendermd/actions/workflows/release.yml/badge.svg)](https://github.com/kristyancarvalho/rendermd/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/github/license/kristyancarvalho/rendermd)](LICENSE)
+[![Go version](https://img.shields.io/github/go-mod/go-version/kristyancarvalho/rendermd)](go.mod)
+[![Latest release](https://img.shields.io/github/v/release/kristyancarvalho/rendermd)](https://github.com/kristyancarvalho/rendermd/releases)
+[![Active milestones](https://img.shields.io/badge/milestones-active-2563eb)](https://github.com/kristyancarvalho/rendermd/milestones)
+
+`rendermd` is a terminal Markdown renderer built for reading local Markdown files quickly, clearly, and without leaving the command line.
+
+It supports syntax-aware rendering, hot reload, search navigation, configurable themes, and file or stdin input.
 
 ## Features
 
 - Markdown rendering for headings, emphasis, inline code, fenced code blocks, blockquotes, lists, task lists, tables, and thematic breaks
+- Syntax highlighting for common code blocks
 - Hot reload on file save with debounced watcher events
 - Search with next and previous result navigation
 - Built-in `default` and `light` themes
-- TOML configuration at `~/.config/mdp/config.toml`
-- File and stdin input
+- TOML configuration at `~/.config/rendermd/config.toml`
 - Build-time version, commit, and date metadata
 
 ## Installation
@@ -22,50 +30,45 @@ Requirements:
 - Git
 
 ```sh
-git clone https://github.com/kristyancarvalho/mdp.git
-cd mdp
+git clone https://github.com/kristyancarvalho/rendermd.git
+cd rendermd
 make build
-install -Dm755 bin/mdp ~/.local/bin/mdp
+install -Dm755 bin/rendermd ~/.local/bin/rendermd
 ```
 
-### With `go install`
+### With Go
 
 ```sh
-go install github.com/kristyancarvalho/mdp/cmd/mdp@latest
+go install github.com/kristyancarvalho/rendermd/cmd/rendermd@latest
 ```
 
 This installs the binary into `$GOBIN`, or `$GOPATH/bin` when `GOBIN` is not set.
 
 ### Arch Linux
 
-Arch users can build the AUR package metadata from `packaging/aur`.
+The AUR package metadata lives in `packaging/aur`.
 
 ```sh
 cd packaging/aur
 makepkg -si
 ```
 
-After the package is submitted to AUR:
+After the package is published to AUR:
 
 ```sh
-paru -S mdp-pager
+paru -S rendermd
 ```
-
-The AUR package name is `mdp-pager` because Arch already ships a different package named `mdp`. The package installs this project as `/usr/bin/mdp` and conflicts with Arch's `mdp` package.
 
 ## Usage
 
 ```sh
-mdp README.md
-mdp --watch README.md
-mdp -w README.md
-mdp --theme light README.md
-mdp --config ~/.config/mdp/config.toml README.md
-cat README.md | mdp
-mdp --version
+rendermd README.md
+rendermd --watch README.md
+rendermd --theme light README.md
+rendermd --config ~/.config/rendermd/config.toml README.md
+cat README.md | rendermd
+rendermd --version
 ```
-
-`--version` prints the application version, commit hash, and build date. Builds created with `make build`, `make install`, or the release workflow inject those values with linker flags.
 
 ## Flags
 
@@ -81,19 +84,19 @@ mdp --version
 
 | Key | Action |
 |-----|--------|
-| `j` / `k` | Scroll down / up |
-| `Ctrl+d` / `Ctrl+u` | Half page down / up |
+| `j` / `k` | Scroll down or up |
+| `Ctrl+d` / `Ctrl+u` | Half page down or up |
 | `gg` | Go to top |
 | `G` | Go to bottom |
 | `/` | Enter search |
-| `n` / `N` | Next / previous result |
+| `n` / `N` | Next or previous result |
 | `r` | Reload file |
 | `?` | Toggle help |
 | `q` | Quit |
 
 ## Configuration
 
-Create `~/.config/mdp/config.toml` or copy `config.example.toml`.
+Create `~/.config/rendermd/config.toml` or copy `config.example.toml`.
 
 ```toml
 [ui]
@@ -153,14 +156,14 @@ Theme colors accept hex colors or ANSI 256-color values. Invalid theme names fal
 ```sh
 go test ./...
 make build
-./bin/mdp --version
+./bin/rendermd --version
 ```
 
 The main packages are:
 
 | Path | Purpose |
 |------|---------|
-| `cmd/mdp` | CLI entrypoint |
+| `cmd/rendermd` | CLI entrypoint |
 | `internal/app` | Flag parsing and runtime wiring |
 | `internal/config` | Defaults, TOML loading, validation, and merge logic |
 | `internal/markdown` | Markdown parsing and normalization |
@@ -170,6 +173,18 @@ The main packages are:
 | `internal/ui` | Bubble Tea model |
 | `internal/watch` | File watcher with debounced events |
 
+## Project Planning
+
+Active work is tracked in [GitHub milestones](https://github.com/kristyancarvalho/rendermd/milestones). Use the milestone list to find upcoming releases, open tasks, and the current release focus.
+
+## Contributing
+
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), then open an issue or pull request against the current milestone.
+
 ## Releases
 
-Releases are created from `v*` tags by the GitHub Actions workflow in `.github/workflows/release.yml`. See `docs/release.md` for the release checklist and artifact details.
+Releases are created from `v*` tags by the GitHub Actions workflow in `.github/workflows/release.yml`. See [docs/release.md](docs/release.md) for the release checklist and artifact details.
+
+## License
+
+`rendermd` is released under the [MIT License](LICENSE).

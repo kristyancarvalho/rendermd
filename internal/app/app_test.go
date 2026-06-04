@@ -22,7 +22,7 @@ func TestRun_Version(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	for _, want := range []string{"mdp v1.2.3", "commit abc1234", "built 2026-06-03T00:00:00Z"} {
+	for _, want := range []string{"rendermd v1.2.3", "commit abc1234", "built 2026-06-03T00:00:00Z"} {
 		if !strings.Contains(out.String(), want) {
 			t.Fatalf("version output missing %q: %q", want, out.String())
 		}

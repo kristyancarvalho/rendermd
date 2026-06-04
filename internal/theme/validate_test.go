@@ -237,8 +237,8 @@ func TestValidationWarning_String_ContainsFieldAndValue(t *testing.T) {
 	if !strings.Contains(s, "some explanation") {
 		t.Errorf("warning string should contain message, got: %q", s)
 	}
-	if !strings.HasPrefix(s, "mdp:") {
-		t.Errorf("warning string should start with 'mdp:', got: %q", s)
+	if !strings.HasPrefix(s, "rendermd:") {
+		t.Errorf("warning string should start with 'rendermd:', got: %q", s)
 	}
 }
 
