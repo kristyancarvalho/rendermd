@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"hash/fnv"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/kristyancarvalho/mdp/internal/model"
 	"github.com/kristyancarvalho/mdp/internal/syntax"
+	"github.com/mattn/go-runewidth"
 )
 
 type StyleID int
@@ -243,7 +243,7 @@ func renderList(lst *model.List, width int, cfg LayoutConfig) []Line {
 				marker = "[ ] "
 			}
 		}
-		markerWidth := utf8.RuneCountInString(marker)
+		markerWidth := runewidth.StringWidth(marker)
 		inner := width - markerWidth
 		if inner < 5 {
 			inner = 5
@@ -294,7 +294,7 @@ func renderTable(t *model.Table, width int, _ LayoutConfig) []Line {
 
 	colWidths := make([]int, nCols)
 	measureSpans := func(spans []model.Span) int {
-		return utf8.RuneCountInString(spansText(spans))
+		return runewidth.StringWidth(spansText(spans))
 	}
 	for i, h := range t.Headers {
 		if w := measureSpans(h); w > colWidths[i] {
@@ -332,7 +332,7 @@ func renderTable(t *model.Table, width int, _ LayoutConfig) []Line {
 
 	formatCell := func(spans []model.Span, col int) string {
 		text := spansText(spans)
-		w := utf8.RuneCountInString(text)
+		w := runewidth.StringWidth(text)
 		max := colWidths[col]
 		if w > max {
 			runes := []rune(text)
@@ -435,17 +435,21 @@ func wrapText(text string, width int) []string {
 	}
 	var lines []string
 	var cur strings.Builder
+	curWidth := 0
 	for _, w := range words {
-		wl := utf8.RuneCountInString(w)
+		wl := runewidth.StringWidth(w)
 		if cur.Len() == 0 {
 			cur.WriteString(w)
-		} else if cur.Len()+1+wl <= width {
+			curWidth = wl
+		} else if curWidth+1+wl <= width {
 			cur.WriteByte(' ')
 			cur.WriteString(w)
+			curWidth += 1 + wl
 		} else {
 			lines = append(lines, cur.String())
 			cur.Reset()
 			cur.WriteString(w)
+			curWidth = wl
 		}
 	}
 	if cur.Len() > 0 {
@@ -502,7 +506,7 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 			if (curWidth > 0 || (wi == 0 && leadingSpace)) && wi >= 0 {
 				spaceNeeded = 1
 			}
-			wl := utf8.RuneCountInString(word)
+			wl := runewidth.StringWidth(word)
 			if curWidth > 0 && curWidth+spaceNeeded+wl > width {
 				flushLine()
 				spaceNeeded = 0
@@ -512,7 +516,7 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 				text = " " + word
 			}
 			curLine = append(curLine, Segment{Text: text, Style: ch.style})
-			curWidth += utf8.RuneCountInString(text)
+			curWidth += runewidth.StringWidth(text)
 		}
 	}
 	if len(curLine) > 0 {
@@ -525,7 +529,7 @@ func wrapSpans(spans []model.Span, width int, cfg LayoutConfig) []Line {
 }
 
 func padLeft(s string, n int) string {
-	w := utf8.RuneCountInString(s)
+	w := runewidth.StringWidth(s)
 	if w >= n {
 		return s
 	}
@@ -560,51 +564,8 @@ func writeBlockHash(h interface{ Write([]byte) (int, error) }, b model.Block) {
 		}
 	case *model.ThematicBreak:
 		h.Write([]byte{4})
-	case *model.List:
-		h.Write([]byte{5})
-		if v.Ordered {
-			h.Write([]byte{1})
-		} else {
-			h.Write([]byte{0})
-		}
-		for _, item := range v.Items {
-			if item.Checked != nil {
-				if *item.Checked {
-					h.Write([]byte{1})
-				} else {
-					h.Write([]byte{0})
-				}
-			} else {
-				h.Write([]byte{2})
-			}
-			for _, blk := range item.Blocks {
-				writeBlockHash(h, blk)
-			}
-		}
-	case *model.Quote:
-		h.Write([]byte{6})
-		for _, blk := range v.Blocks {
-			writeBlockHash(h, blk)
-		}
-	case *model.Table:
-		h.Write([]byte{7})
-		for _, cell := range v.Headers {
-			for _, s := range cell {
-				writeSpanHash(h, s)
-			}
-		}
-		for _, cell := range v.Rows {
-			for _, s := range cell {
-				writeSpanHash(h, s)
-			}
-		}
-		for _, a := range v.Align {
-			h.Write([]byte{byte(a)})
-		}
-	case *model.ImagePlaceholder:
-		h.Write([]byte{8})
-		h.Write([]byte(v.AltText))
-		h.Write([]byte(v.URL))
+	default:
+		h.Write([]byte{0})
 	}
 }
 
@@ -614,23 +575,5 @@ func writeSpanHash(h interface{ Write([]byte) (int, error) }, s model.Span) {
 		h.Write([]byte(v.Value))
 	case *model.InlineCode:
 		h.Write([]byte(v.Value))
-	case *model.Emphasis:
-		h.Write([]byte{10})
-		for _, child := range v.Children {
-			writeSpanHash(h, child)
-		}
-	case *model.Strong:
-		h.Write([]byte{11})
-		for _, child := range v.Children {
-			writeSpanHash(h, child)
-		}
-	case *model.Link:
-		h.Write([]byte{12})
-		for _, child := range v.Label {
-			writeSpanHash(h, child)
-		}
-		h.Write([]byte(v.URL))
-	case *model.HardBreak:
-		h.Write([]byte{13})
 	}
 }

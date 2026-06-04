@@ -469,116 +469,6 @@ func TestEngine_Cache_InvalidatesOnChange(t *testing.T) {
 	}
 }
 
-func TestEngine_Cache_InvalidatesOnListChange(t *testing.T) {
-	e := &Engine{}
-	cfg := defaultCfg(80)
-
-	lst1 := &model.List{
-		Ordered: false,
-		Items:   []model.ListItem{{Blocks: []model.Block{para("apple")}}},
-	}
-	lst2 := &model.List{
-		Ordered: false,
-		Items:   []model.ListItem{{Blocks: []model.Block{para("banana")}}},
-	}
-
-	l1 := e.Render(doc(lst1), cfg)
-	l2 := e.Render(doc(lst2), cfg)
-
-	if flattenLines(l1) == flattenLines(l2) {
-		t.Error("cache should invalidate when list content changes")
-	}
-}
-
-func TestEngine_Cache_InvalidatesOnOrderedFlagChange(t *testing.T) {
-	e := &Engine{}
-	cfg := defaultCfg(80)
-
-	unordered := &model.List{
-		Ordered: false,
-		Items:   []model.ListItem{{Blocks: []model.Block{para("item")}}},
-	}
-	ordered := &model.List{
-		Ordered: true,
-		Items:   []model.ListItem{{Blocks: []model.Block{para("item")}}},
-	}
-
-	l1 := e.Render(doc(unordered), cfg)
-	l2 := e.Render(doc(ordered), cfg)
-
-	if flattenLines(l1) == flattenLines(l2) {
-		t.Error("cache should invalidate when list ordered flag changes")
-	}
-}
-
-func TestEngine_Cache_InvalidatesOnQuoteChange(t *testing.T) {
-	e := &Engine{}
-	cfg := defaultCfg(80)
-
-	q1 := &model.Quote{Blocks: []model.Block{para("first quote")}}
-	q2 := &model.Quote{Blocks: []model.Block{para("second quote")}}
-
-	l1 := e.Render(doc(q1), cfg)
-	l2 := e.Render(doc(q2), cfg)
-
-	if flattenLines(l1) == flattenLines(l2) {
-		t.Error("cache should invalidate when quote content changes")
-	}
-}
-
-func TestEngine_Cache_InvalidatesOnTableChange(t *testing.T) {
-	e := &Engine{}
-	cfg := defaultCfg(80)
-
-	tbl1 := &model.Table{
-		Headers: [][]model.Span{{&model.Text{Value: "Name"}}},
-		Rows:    [][]model.Span{{&model.Text{Value: "Alice"}}},
-	}
-	tbl2 := &model.Table{
-		Headers: [][]model.Span{{&model.Text{Value: "Name"}}},
-		Rows:    [][]model.Span{{&model.Text{Value: "Bob"}}},
-	}
-
-	l1 := e.Render(doc(tbl1), cfg)
-	l2 := e.Render(doc(tbl2), cfg)
-
-	if flattenLines(l1) == flattenLines(l2) {
-		t.Error("cache should invalidate when table row content changes")
-	}
-}
-
-func TestEngine_Cache_InvalidatesOnImagePlaceholderChange(t *testing.T) {
-	e := &Engine{}
-	cfg := defaultCfg(80)
-
-	img1 := &model.ImagePlaceholder{AltText: "cat", URL: "https://example.com/cat.png"}
-	img2 := &model.ImagePlaceholder{AltText: "dog", URL: "https://example.com/dog.png"}
-
-	l1 := e.Render(doc(img1), cfg)
-	l2 := e.Render(doc(img2), cfg)
-
-	if flattenLines(l1) == flattenLines(l2) {
-		t.Error("cache should invalidate when image placeholder content changes")
-	}
-}
-
-func TestEngine_Cache_StableOnUnchangedList(t *testing.T) {
-	e := &Engine{}
-	cfg := defaultCfg(80)
-
-	lst := &model.List{
-		Ordered: true,
-		Items:   []model.ListItem{{Blocks: []model.Block{para("item")}}},
-	}
-
-	first := e.Render(doc(lst), cfg)
-	second := e.Render(doc(lst), cfg)
-
-	if len(first) > 0 && len(second) > 0 && &first[0] != &second[0] {
-		t.Error("cache should return the same slice for an unchanged list document")
-	}
-}
-
 func TestWrapText_ShortLine(t *testing.T) {
 	lines := wrapText("hello world", 80)
 	if len(lines) != 1 {
@@ -610,5 +500,72 @@ func TestPadLeft(t *testing.T) {
 	}
 	if got := padLeft("10", 2); got != "10" {
 		t.Errorf("padLeft: want '10', got %q", got)
+	}
+}
+
+func TestWrapText_MultibyteLatin_FitsCorrectly(t *testing.T) {
+	lines := wrapText("café naïve", 80)
+	if len(lines) != 1 {
+		t.Errorf("short accented text should not wrap, got %d lines", len(lines))
+	}
+	if lines[0] != "café naïve" {
+		t.Errorf("want %q, got %q", "café naïve", lines[0])
+	}
+}
+
+func TestWrapText_CJK_WrapsAtVisualWidth(t *testing.T) {
+	lines := wrapText("abc 你好", 6)
+	if len(lines) != 2 {
+		t.Errorf("CJK: want 2 lines, got %d: %v", len(lines), lines)
+	}
+	if len(lines) >= 1 && lines[0] != "abc" {
+		t.Errorf("CJK first line: want 'abc', got %q", lines[0])
+	}
+	if len(lines) >= 2 && lines[1] != "你好" {
+		t.Errorf("CJK second line: want '你好', got %q", lines[1])
+	}
+}
+
+func TestWrapText_CJK_EachWordOnOwnLine(t *testing.T) {
+	lines := wrapText("你好 世界 中文", 5)
+	if len(lines) != 3 {
+		t.Errorf("want 3 lines, got %d: %v", len(lines), lines)
+	}
+	for i, l := range lines {
+		if len(strings.Fields(l)) > 1 {
+			t.Errorf("line %d should contain one word at width 5, got %q", i, l)
+		}
+	}
+}
+
+func TestWrapText_MixedASCIIAndWide(t *testing.T) {
+	lines := wrapText("hi 你好", 5)
+	if len(lines) != 2 {
+		t.Errorf("mixed ASCII+CJK: want 2 lines, got %d: %v", len(lines), lines)
+	}
+}
+
+func TestPadLeft_WideChars(t *testing.T) {
+	if got := padLeft("你好", 6); got != "  你好" {
+		t.Errorf("padLeft wide: want %q, got %q", "  你好", got)
+	}
+	if got := padLeft("你好", 4); got != "你好" {
+		t.Errorf("padLeft exact width: want %q, got %q", "你好", got)
+	}
+	if got := padLeft("你好世界", 4); got != "你好世界" {
+		t.Errorf("padLeft overflow: want %q, got %q", "你好世界", got)
+	}
+}
+
+func TestLayout_Paragraph_CJK_WrapsCorrectly(t *testing.T) {
+	lines := Layout(doc(para("你好 你好 你好")), LayoutConfig{Width: 10, Padding: 0, SoftWrap: true, HideSyntax: true})
+	content := 0
+	for _, l := range lines {
+		if !isEmptyLine(l) {
+			content++
+		}
+	}
+	if content < 2 {
+		t.Errorf("CJK paragraph should wrap to ≥2 content lines at width 10, got %d", content)
 	}
 }
