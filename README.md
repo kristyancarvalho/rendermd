@@ -10,6 +10,8 @@
 
 It supports syntax-aware rendering, hot reload, search navigation, configurable themes, and file or stdin input.
 
+<img src="./assets/screenshot.png" height=350px/>
+
 ## Features
 
 - Markdown rendering for headings, emphasis, inline code, fenced code blocks, blockquotes, lists, task lists, tables, and thematic breaks
@@ -19,6 +21,7 @@ It supports syntax-aware rendering, hot reload, search navigation, configurable 
 - Built-in `default` and `light` themes
 - TOML configuration at `~/.config/rendermd/config.toml`
 - Build-time version, commit, and date metadata
+
 
 ## Installation
 
