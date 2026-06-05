@@ -18,8 +18,8 @@
 5. Create and push a version tag:
 
 ```sh
-git tag v1.2.0
-git push origin v1.2.0
+git tag v1.2.1
+git push origin v1.2.1
 ```
 
 The `release` workflow runs on `v*` tags. It tests the project, builds Linux, macOS, and Windows artifacts, generates `checksums.txt`, and publishes the files to a GitHub Release.
