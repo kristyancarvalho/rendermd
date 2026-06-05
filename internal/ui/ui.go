@@ -124,18 +124,25 @@ func (m *uiModel) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if !m.cfg.UI.Mouse {
 		return m, nil
 	}
-	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
-		raw := linkAt(m.lines, m.viewport, msg.X, msg.Y)
-		if raw == "" {
-			return m, nil
+	switch msg.Button {
+	case tea.MouseButtonWheelDown:
+		m.scrollBy(3)
+	case tea.MouseButtonWheelUp:
+		m.scrollBy(-3)
+	case tea.MouseButtonLeft:
+		if msg.Action == tea.MouseActionPress {
+			raw := linkAt(m.lines, m.viewport, msg.X, msg.Y)
+			if raw == "" {
+				return m, nil
+			}
+			cmd, err := openURLCmd(raw)
+			if err != nil {
+				m.lastErr = err
+				return m, nil
+			}
+			m.lastErr = nil
+			return m, cmd
 		}
-		cmd, err := openURLCmd(raw)
-		if err != nil {
-			m.lastErr = err
-			return m, nil
-		}
-		m.lastErr = nil
-		return m, cmd
 	}
 	return m, nil
 }
