@@ -22,6 +22,27 @@ It supports syntax-aware rendering, hot reload, search navigation, configurable 
 
 ## Installation
 
+### Arch Linux
+
+From AUR:
+
+```sh
+paru -S rendermd
+```
+
+or
+
+```sh
+yay -S rendermd
+```
+
+The AUR package metadata lives in `packaging/aur`.
+
+```sh
+cd packaging/aur
+makepkg -si
+```
+
 ### From Source
 
 Requirements:
@@ -43,21 +64,6 @@ go install github.com/kristyancarvalho/rendermd/cmd/rendermd@latest
 ```
 
 This installs the binary into `$GOBIN`, or `$GOPATH/bin` when `GOBIN` is not set.
-
-### Arch Linux
-
-The AUR package metadata lives in `packaging/aur`.
-
-```sh
-cd packaging/aur
-makepkg -si
-```
-
-After the package is published to AUR:
-
-```sh
-paru -S rendermd
-```
 
 ## Usage
 
