@@ -39,7 +39,7 @@ jobs:
             fi
             binary="rendermd-${version}-${os}-${arch}${ext}"
             GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${version} -X main.commit=${commit} -X main.date=${date}" -o "dist/${binary}" ./cmd/rendermd
-            tar -czf "dist/rendermd-${version}-${os}-${arch}.tar.gz" -C dist "${binary}" -C .. README.md LICENSE config.example.toml
+            tar -czf "dist/rendermd-${version}-${os}-${arch}.tar.gz" -C dist "${binary}" -C .. README.md LICENSE config-example.toml
             rm "dist/${binary}"
           done
 
