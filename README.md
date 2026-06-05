@@ -96,7 +96,7 @@ rendermd --version
 
 ## Configuration
 
-Create `~/.config/rendermd/config.toml` or copy `config.example.toml`.
+Create `~/.config/rendermd/config.toml` or copy `config-example.toml`.
 
 ```toml
 [ui]
