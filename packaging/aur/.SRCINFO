@@ -1,6 +1,6 @@
 pkgbase = rendermd
 	pkgdesc = Terminal Markdown renderer with syntax-aware output, hot reload, and fuzzy search
-	pkgver = 1.2.0
+	pkgver = 1.2.1
 	pkgrel = 1
 	url = https://github.com/kristyancarvalho/rendermd
 	arch = x86_64
@@ -9,7 +9,7 @@ pkgbase = rendermd
 	makedepends = go
 	depends = glibc
 	options = !debug
-	source = rendermd-1.2.0.tar.gz::https://github.com/kristyancarvalho/rendermd/archive/refs/tags/v1.2.0.tar.gz
+	source = rendermd-1.2.1.tar.gz::https://github.com/kristyancarvalho/rendermd/archive/refs/tags/v1.2.1.tar.gz
 	sha256sums = SKIP
 
 pkgname = rendermd
