@@ -19,6 +19,10 @@ mem.prof
 *.prof
 
 specs
+packaging/aur/pkg/
+packaging/aur/src/
+packaging/aur/*.pkg.tar.zst
+packaging/aur/*.tar.gz
 
 # go module cache and vendor
 vendor/
