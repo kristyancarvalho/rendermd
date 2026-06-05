@@ -13,7 +13,7 @@ cd packaging/aur
 makepkg -si
 ```
 
-`makepkg` downloads the pinned upstream source, builds the Go binary, installs the license, and installs `config.example.toml` under `/usr/share/doc/rendermd`.
+`makepkg` downloads the pinned upstream source, builds the Go binary, installs the license, and installs `config-example.toml` under `/usr/share/doc/rendermd`.
 
 ## AUR Publication
 

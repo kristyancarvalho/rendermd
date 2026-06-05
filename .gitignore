@@ -38,7 +38,7 @@ Thumbs.db
 .env
 .env.*
 *.env
-!config.example.toml
+!config-example.toml
 
 # test artifacts
 testdata/*.tmp
