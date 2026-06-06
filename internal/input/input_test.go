@@ -33,6 +33,8 @@ func TestDefaultKeymap_BasicActions(t *testing.T) {
 		{key("G"), ActionBottom},
 		{specialKey(tea.KeyEsc), ActionEsc},
 		{specialKey(tea.KeyEnter), ActionEnter},
+		{specialKey(tea.KeyUp), ActionUp},
+		{specialKey(tea.KeyDown), ActionDown},
 	}
 
 	for _, tt := range tests {

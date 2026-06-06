@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/kristyancarvalho/rendermd/internal/config"
@@ -27,6 +29,11 @@ func valueOrDefault(value, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func isMarkdownFile(filename string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
+	return ext == ".md" || ext == ".markdown"
 }
 
 func Run(build BuildInfo, args []string) error {
@@ -69,6 +76,9 @@ func Run(build BuildInfo, args []string) error {
 	posArgs := fs.Args()
 	if len(posArgs) > 0 {
 		filename = posArgs[0]
+		if !isMarkdownFile(filename) {
+			return fmt.Errorf("unsupported file type %q: rendermd only accepts .md and .markdown files", filepath.Ext(filename))
+		}
 		content, err = os.ReadFile(filename)
 		if err != nil {
 			return fmt.Errorf("cannot read file: %w", err)

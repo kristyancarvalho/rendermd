@@ -106,6 +106,10 @@ func (k Keymap) Resolve(msg tea.KeyMsg) (Action, string) {
 		return ActionQuit, ""
 	case matchKey(key, k.Help):
 		return ActionHelp, ""
+	case key == "up":
+		return ActionUp, ""
+	case key == "down":
+		return ActionDown, ""
 	}
 	return ActionChar, key
 }

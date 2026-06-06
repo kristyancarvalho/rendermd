@@ -297,8 +297,8 @@ func (m *uiModel) helpView() string {
 
 	km := m.keymap
 	content := fmt.Sprintf(
-		"  %-12s scroll up\n"+
-			"  %-12s scroll down\n"+
+		"  %-12s / ↑        scroll up\n"+
+			"  %-12s / ↓        scroll down\n"+
 			"  %-12s half page up\n"+
 			"  %-12s half page down\n"+
 			"  %-12s top\n"+
