@@ -70,6 +70,29 @@ func TestRun_ThemeFlag(t *testing.T) {
 	}
 }
 
+func TestRun_UnsupportedFileType(t *testing.T) {
+	err := Run(BuildInfo{Version: "dev"}, []string{"/any/path/document.txt"})
+	if err == nil {
+		t.Fatal("expected error for unsupported file type, got nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("expected error to contain %q, got: %v", "unsupported", err)
+	}
+}
+
+func TestRun_MarkdownExtension_Accepted(t *testing.T) {
+	err := Run(BuildInfo{Version: "dev"}, []string{"/any/path/document.markdown"})
+	if err == nil {
+		t.Fatal("expected error for missing file, got nil")
+	}
+	if strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("expected no unsupported error for .markdown extension, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "cannot read file") {
+		t.Fatalf("expected error to contain %q, got: %v", "cannot read file", err)
+	}
+}
+
 func runWithStdout(out io.Writer, fn func() error) error {
 	original := os.Stdout
 	read, write, err := os.Pipe()
