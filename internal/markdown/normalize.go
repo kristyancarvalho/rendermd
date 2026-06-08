@@ -2,6 +2,7 @@ package markdown
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/kristyancarvalho/rendermd/internal/model"
 	"github.com/yuin/goldmark/ast"
@@ -55,7 +56,13 @@ func toBlock(n ast.Node, src []byte) model.Block {
 	case *ast.ThematicBreak:
 		return &model.ThematicBreak{}
 	case *ast.HTMLBlock:
+		if v.HTMLBlockType == ast.HTMLBlockType2 {
+			return nil
+		}
 		raw := nodeRawText(v, src)
+		if isHTMLComment(raw) {
+			return nil
+		}
 		return &model.Paragraph{Spans: []model.Span{&model.Text{Value: raw}}}
 	default:
 		raw := nodeRawText(n, src)
@@ -171,6 +178,17 @@ func toSpan(n ast.Node, src []byte) model.Span {
 		}
 	case *ast.Image:
 		return &model.Text{Value: "[image: " + nodeRawText(v, src) + "]"}
+	case *ast.RawHTML:
+		var segBuf bytes.Buffer
+		for i := 0; i < v.Segments.Len(); i++ {
+			seg := v.Segments.At(i)
+			segBuf.Write(seg.Value(src))
+		}
+		raw := segBuf.String()
+		if isHTMLComment(raw) {
+			return nil
+		}
+		return &model.Text{Value: raw}
 	case *extast.Strikethrough:
 		return &model.Emphasis{Children: childSpans(v, src)}
 	default:
@@ -199,4 +217,9 @@ func nodeRawText(n ast.Node, src []byte) string {
 		}
 	}
 	return buf.String()
+}
+
+func isHTMLComment(s string) bool {
+	trimmed := strings.TrimSpace(s)
+	return strings.HasPrefix(trimmed, "<!--") && strings.Contains(trimmed, "-->")
 }

@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/kristyancarvalho/rendermd/internal/model"
@@ -263,5 +264,87 @@ func TestParse_MultipleBlocks(t *testing.T) {
 	doc := mustParse(t, src)
 	if len(doc.Blocks) < 3 {
 		t.Errorf("expected at least 3 blocks, got %d", len(doc.Blocks))
+	}
+}
+
+func TestParse_HTMLBlockComment_Ignored(t *testing.T) {
+	doc := mustParse(t, "<!-- this is a comment -->\n")
+	if len(doc.Blocks) != 0 {
+		t.Errorf("HTML block comment should produce no blocks, got %d", len(doc.Blocks))
+	}
+}
+
+func TestParse_MultiLineHTMLBlockComment_Ignored(t *testing.T) {
+	src := "<!--\nThis spans\nmultiple lines.\n-->\n"
+	doc := mustParse(t, src)
+	if len(doc.Blocks) != 0 {
+		t.Errorf("multi-line HTML block comment should produce no blocks, got %d", len(doc.Blocks))
+	}
+}
+
+func TestParse_InlineHTMLComment_Ignored(t *testing.T) {
+	doc := mustParse(t, "before <!-- hidden --> after\n")
+	p, ok := firstBlock(t, doc).(*model.Paragraph)
+	if !ok {
+		t.Fatalf("expected Paragraph, got %T", firstBlock(t, doc))
+	}
+	text := spansToText(p.Spans)
+	if strings.Contains(text, "hidden") {
+		t.Errorf("inline comment content should not appear in spans, got %q", text)
+	}
+}
+
+func TestParse_InlineHTMLComment_SurroundingTextPreserved(t *testing.T) {
+	doc := mustParse(t, "before <!-- hidden --> after\n")
+	p, ok := firstBlock(t, doc).(*model.Paragraph)
+	if !ok {
+		t.Fatalf("expected Paragraph, got %T", firstBlock(t, doc))
+	}
+	text := spansToText(p.Spans)
+	if !strings.Contains(text, "before") {
+		t.Errorf("text before inline comment should be preserved, got %q", text)
+	}
+	if !strings.Contains(text, "after") {
+		t.Errorf("text after inline comment should be preserved, got %q", text)
+	}
+}
+
+func TestParse_CommentBetweenParagraphs_NoExtraBlocks(t *testing.T) {
+	src := "First paragraph.\n\n<!-- comment -->\n\nSecond paragraph.\n"
+	doc := mustParse(t, src)
+	for _, b := range doc.Blocks {
+		if p, ok := b.(*model.Paragraph); ok {
+			if strings.Contains(spansToText(p.Spans), "comment") {
+				t.Error("comment content should not appear in any paragraph")
+			}
+		}
+	}
+	contentBlocks := 0
+	for _, b := range doc.Blocks {
+		if p, ok := b.(*model.Paragraph); ok {
+			text := spansToText(p.Spans)
+			if strings.Contains(text, "First") || strings.Contains(text, "Second") {
+				contentBlocks++
+			}
+		}
+	}
+	if contentBlocks != 2 {
+		t.Errorf("expected exactly 2 content paragraphs around the comment, got %d", contentBlocks)
+	}
+}
+
+func TestParse_CommentDoesNotAffectHeading(t *testing.T) {
+	src := "<!-- comment -->\n\n# Heading\n"
+	doc := mustParse(t, src)
+	var found bool
+	for _, b := range doc.Blocks {
+		if h, ok := b.(*model.Heading); ok {
+			if spansToText(h.Spans) == "Heading" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Error("heading after a comment block should still be parsed")
 	}
 }
